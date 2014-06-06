@@ -40,56 +40,78 @@ define %string* @appendChar(%string* %oldTail, i32 %char) {
        ret %string* %newTail
 }
 
-define void @getNextToken(i8* %input) {
+define %string* @getNextToken(i8* %input, i32 %firstChar) {
 entry:
        %space = load i32* @.space
        %newline = load i32* @.newline
 
        %tokenHead = alloca %string*
-       store %string* null, %string** %tokenHead
-
        %tokenTail = alloca %string*
-       store %string* null, %string** %tokenTail
 
-       br label %read_space
-
-read_space:
-       %first_char = call i32 @getc(i8* %input)
-
-       %is_ws = icmp eq i32 %first_char, %space
-       br i1 %is_ws, label %read_space, label %check_newline
-
-check_newline:
-       %is_nl = icmp eq i32 %first_char, %newline
-       br i1 %is_nl, label %read_space, label %process
-
-process:
-       call i32 @putchar(i32 %first_char)
-
-       %currentHead = load %string** %tokenHead
-       %isFirstChar = icmp eq %string* null, %currentHead
-       br i1 %isFirstChar, label %initialize_token, label %append_char
-
-initialize_token:
-       %newHead = call %string* @newString(i32 %first_char)
+       %newHead = call %string* @newString(i32 %firstChar)
        store %string* %newHead, %string** %tokenHead
        store %string* %newHead, %string** %tokenTail
-       br label %continue
 
-append_char:
-       %newTail = call %string* @appendChar(%string* %currentHead, i32 %first_char)
-       store %string* %newTail, %string** %tokenTail
-       br label %continue
+       call i32 @putchar(i32 %firstChar)
 
-; Need to move the EOF check out of this function into a read
-; function, and make this read just one token.
-continue:
+       br label %read_next
+
+read_next:
+       %next_char = call i32 @getc(i8* %input)
+
        %eof_ret = call i32 @feof(i8* %input)
        %is_eof = icmp ne i32 %eof_ret, 0
-       br i1 %is_eof, label %eof, label %read_space
+       br i1 %is_eof, label %return, label %check_space
 
-eof:
-       ret void
+check_space:
+       %is_ws = icmp eq i32 %next_char, %space
+       br i1 %is_ws, label %return, label %check_newline
+
+check_newline:
+       %is_nl = icmp eq i32 %next_char, %newline
+       br i1 %is_nl, label %return, label %process
+
+process:
+       call i32 @putchar(i32 %next_char)
+
+       %oldTail = load %string** %tokenTail
+       %newTail = call %string* @appendChar(%string* %oldTail, i32 %next_char)
+       store %string* %newTail, %string** %tokenTail
+       br label %read_next
+
+return:
+       call i32 @putchar(i32 %newline)
+       ret %string* %newHead
+}
+
+define void @read(i8* %input) {
+entry:
+       %space = load i32* @.space
+       %newline = load i32* @.newline
+
+       br label %read_next
+
+read_next:
+       %firstChar = call i32 @getc(i8* %input)
+
+       %eof_ret = call i32 @feof(i8* %input)
+       %is_eof = icmp ne i32 %eof_ret, 0
+       br i1 %is_eof, label %return, label %check_space
+
+check_space:
+       %is_ws = icmp eq i32 %firstChar, %space
+       br i1 %is_ws, label %read_next, label %check_newline
+
+check_newline:
+       %is_nl = icmp eq i32 %firstChar, %newline
+       br i1 %is_nl, label %read_next, label %process
+
+process:
+       call %string* @getNextToken(i8* %input, i32 %firstChar)
+       br label %read_next
+
+return:
+      ret void
 }
 
 define i32 @main() {
@@ -97,7 +119,7 @@ define i32 @main() {
        %cast_open_mode = getelementptr [2 x i8]* @.open_mode, i64 0, i64 0
        %input = call i8* @fopen(i8* %cast_filename, i8* %cast_open_mode)
 
-       call void @getNextToken(i8* %input)
+       call void @read(i8* %input)
 
        ret i32 0
 }
