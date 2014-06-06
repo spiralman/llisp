@@ -43,6 +43,32 @@ define %string* @appendChar(%string* %oldTail, i32 %char) {
        ret %string* %newTail
 }
 
+define void @printString(%string* %head) {
+       %newline = load i32* @.newline
+       %curPtr = alloca %string*
+       store %string* %head, %string** %curPtr
+
+       br label %print
+
+print:
+       %curNode = load %string** %curPtr
+       %charPtr = getelementptr %string* %curNode, i32 0, i32 1
+       %charVal = load i32* %charPtr
+
+       call i32 @putchar(i32 %charVal)
+
+       %nextPtr = getelementptr %string* %curNode, i32 0, i32 0
+       %nextVal = load %string** %nextPtr
+       store %string* %nextVal, %string** %curPtr
+
+       %is_end = icmp eq %string* %nextVal, null
+       br i1 %is_end, label %done, label %print
+
+done:
+       call i32 @putchar(i32 %newline)
+       ret void
+}
+
 define %string* @getNextToken(i8* %input, i32 %firstChar) {
 entry:
        %space = load i32* @.space
@@ -56,8 +82,6 @@ entry:
        %newHead = call %string* @newString(i32 %firstChar)
        store %string* %newHead, %string** %tokenHead
        store %string* %newHead, %string** %tokenTail
-
-       call i32 @putchar(i32 %firstChar)
 
        br label %first_macro
 
@@ -102,15 +126,12 @@ terminate:
        br label %return
 
 process:
-       call i32 @putchar(i32 %next_char)
-
        %oldTail = load %string** %tokenTail
        %newTail = call %string* @appendChar(%string* %oldTail, i32 %next_char)
        store %string* %newTail, %string** %tokenTail
        br label %read_next
 
 return:
-       call i32 @putchar(i32 %newline)
        ret %string* %newHead
 }
 
@@ -137,7 +158,8 @@ check_newline:
        br i1 %is_nl, label %read_next, label %process
 
 process:
-       call %string* @getNextToken(i8* %input, i32 %firstChar)
+       %nextToken = call %string* @getNextToken(i8* %input, i32 %firstChar)
+       call void @printString(%string* %nextToken)
        br label %read_next
 
 return:
