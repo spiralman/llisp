@@ -2,6 +2,8 @@
 @.open_mode = private unnamed_addr constant [2 x i8] c"r\00"
 @.space = private unnamed_addr constant i32 32
 @.newline = private unnamed_addr constant i32 10
+@.macro = private unnamed_addr constant i32 40
+@.term = private unnamed_addr constant i32 41
 
 ; Linked list, using int instead of char, since that's what getc gives
 ; us.
@@ -12,6 +14,7 @@ declare i8* @malloc(i32) nounwind
 declare i8* @fopen(i8* nocapture, i8* nocapture) nounwind
 declare i32 @feof(i8* nocapture) nounwind
 declare i32 @getc(i8* nocapture) nounwind
+declare i32 @ungetc(i32, i8* nocapture) nounwind
 declare i32 @putchar(i32) nounwind
 
 define %string* @newString(i32 %char) {
@@ -44,6 +47,8 @@ define %string* @getNextToken(i8* %input, i32 %firstChar) {
 entry:
        %space = load i32* @.space
        %newline = load i32* @.newline
+       %macro = load i32* @.macro
+       %term = load i32* @.term
 
        %tokenHead = alloca %string*
        %tokenTail = alloca %string*
@@ -54,7 +59,18 @@ entry:
 
        call i32 @putchar(i32 %firstChar)
 
-       br label %read_next
+       br label %first_macro
+
+; This is mostly duplicated from check macro/terminating, below. Maybe
+; some of this logic should be in read? I'll wait and see what is
+; useful as we build out more of the code.
+first_macro:
+       %first_is_macro = icmp eq i32 %firstChar, %macro
+       br i1 %first_is_macro, label %return, label %first_terminating
+
+first_terminating:
+       %first_is_term = icmp eq i32 %firstChar, %term
+       br i1 %first_is_term, label %return, label %read_next
 
 read_next:
        %next_char = call i32 @getc(i8* %input)
@@ -69,7 +85,21 @@ check_space:
 
 check_newline:
        %is_nl = icmp eq i32 %next_char, %newline
-       br i1 %is_nl, label %return, label %process
+       br i1 %is_nl, label %return, label %check_macro
+
+; This will need to be configurable, in order to support reader
+; macros.
+check_macro:
+       %is_macro = icmp eq i32 %next_char, %macro
+       br i1 %is_macro, label %terminate, label %check_terminating
+
+check_terminating:
+       %is_term = icmp eq i32 %next_char, %term
+       br i1 %is_term, label %terminate, label %process
+
+terminate:
+       call i32 @ungetc(i32 %next_char, i8* %input)
+       br label %return
 
 process:
        call i32 @putchar(i32 %next_char)
