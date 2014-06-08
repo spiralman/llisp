@@ -1,4 +1,4 @@
-SOURCES = main.ll string.ll
+SOURCES = main.ll string.ll list.ll
 BITCODE = $(SOURCES:.ll=.bc)
 
 .PHONY: clean
