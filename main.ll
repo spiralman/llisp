@@ -18,7 +18,7 @@ declare %string* @newString(i32)
 declare %string* @appendChar(%string*, i32)
 declare void @printString(%string*)
 
-define %string* @getNextToken(i8* %input, i32 %firstChar) {
+define %string* @getNextToken(i8* %input) {
 entry:
        %space = load i32* @.space
        %newline = load i32* @.newline
@@ -28,15 +28,32 @@ entry:
        %tokenHead = alloca %string*
        %tokenTail = alloca %string*
 
+       br label %read_first
+
+read_first:
+       %firstChar = call i32 @getc(i8* %input)
+
+       %first_eof_ret = call i32 @feof(i8* %input)
+       %first_is_eof = icmp ne i32 %first_eof_ret, 0
+       br i1 %first_is_eof, label %return_null, label %leading_space
+
+leading_space:
+       %is_leading_ws = icmp eq i32 %firstChar, %space
+       br i1 %is_leading_ws, label %read_first, label %leading_newline
+
+leading_newline:
+       %is_leading_nl = icmp eq i32 %firstChar, %newline
+       br i1 %is_leading_nl, label %read_first, label %initialize
+
+initialize:
        %newHead = call %string* @newString(i32 %firstChar)
        store %string* %newHead, %string** %tokenHead
        store %string* %newHead, %string** %tokenTail
-
        br label %first_macro
 
-; This is mostly duplicated from check macro/terminating, below. Maybe
-; some of this logic should be in read? I'll wait and see what is
-; useful as we build out more of the code.
+; This will need to be configurable, in order to support reader
+; macros, and it also needs to be made into a procedure, since it's
+; repeated below.
 first_macro:
        %first_is_macro = icmp eq i32 %firstChar, %macro
        br i1 %first_is_macro, label %return, label %first_terminating
@@ -80,34 +97,29 @@ process:
        store %string* %newTail, %string** %tokenTail
        br label %read_next
 
+return_null:
+       ret %string* null
+
 return:
        ret %string* %newHead
 }
 
 define void @read(i8* %input) {
 entry:
-       %space = load i32* @.space
-       %newline = load i32* @.newline
-
        br label %read_next
 
 read_next:
-       %firstChar = call i32 @getc(i8* %input)
-
        %eof_ret = call i32 @feof(i8* %input)
        %is_eof = icmp ne i32 %eof_ret, 0
-       br i1 %is_eof, label %return, label %check_space
-
-check_space:
-       %is_ws = icmp eq i32 %firstChar, %space
-       br i1 %is_ws, label %read_next, label %check_newline
-
-check_newline:
-       %is_nl = icmp eq i32 %firstChar, %newline
-       br i1 %is_nl, label %read_next, label %process
+       br i1 %is_eof, label %return, label %process
 
 process:
-       %nextToken = call %string* @getNextToken(i8* %input, i32 %firstChar)
+       %nextToken = call %string* @getNextToken(i8* %input)
+
+       %is_null = icmp eq %string* %nextToken, null
+       br i1 %is_null, label %return, label %print
+
+print:
        call void @printString(%string* %nextToken)
        br label %read_next
 
