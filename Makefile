@@ -1,7 +1,8 @@
 SOURCES = main.ll string.ll list.ll
 BITCODE = $(SOURCES:.ll=.bc)
+TESTS = $(wildcard test/test-*.llisp)
 
-.PHONY: clean
+.PHONY: clean test
 
 all: llisp.bc
 
@@ -13,3 +14,8 @@ llisp.bc: $(BITCODE)
 
 clean:
 	rm -f $(BITCODE)
+
+test: llisp.bc
+	for test in $(TESTS); do \
+	  lli llisp.bc $$test; \
+	done

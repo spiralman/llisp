@@ -1,4 +1,3 @@
-@.str = private unnamed_addr constant [13 x i8] c"define.llisp\00"
 @.open_mode = private unnamed_addr constant [2 x i8] c"r\00"
 @.space = private unnamed_addr constant i32 32
 @.newline = private unnamed_addr constant i32 10
@@ -18,24 +17,22 @@ declare %string* @newString(i32)
 declare %string* @appendChar(%string*, i32)
 declare void @printString(%string*)
 
-define %string* @getNextToken(i8* %input) {
+declare i32 @putchar(i32) nounwind
+declare i32 @puts(i8*) nounwind
+
+define %string* @read(i8* %input) {
 entry:
        %space = load i32* @.space
        %newline = load i32* @.newline
        %macro = load i32* @.macro
        %term = load i32* @.term
 
-       %tokenHead = alloca %string*
        %tokenTail = alloca %string*
-
        br label %read_first
 
 read_first:
        %firstChar = call i32 @getc(i8* %input)
-
-       %first_eof_ret = call i32 @feof(i8* %input)
-       %first_is_eof = icmp ne i32 %first_eof_ret, 0
-       br i1 %first_is_eof, label %return_null, label %leading_space
+       br label %leading_space
 
 leading_space:
        %is_leading_ws = icmp eq i32 %firstChar, %space
@@ -43,96 +40,61 @@ leading_space:
 
 leading_newline:
        %is_leading_nl = icmp eq i32 %firstChar, %newline
-       br i1 %is_leading_nl, label %read_first, label %initialize
+       br i1 %is_leading_nl, label %read_first, label %start_token
 
-initialize:
-       %newHead = call %string* @newString(i32 %firstChar)
-       store %string* %newHead, %string** %tokenHead
-       store %string* %newHead, %string** %tokenTail
-       br label %first_macro
+; TODO: Check for leading macro/term i.e. ( or )
+; leading_macro:
+;        %is_leading_macro = icmp eq i32 %firstChar, %macro
+;        br i1 %is_leading_macro, label %start_macro, label %leading_term
 
-; This will need to be configurable, in order to support reader
-; macros, and it also needs to be made into a procedure, since it's
-; repeated below.
-first_macro:
-       %first_is_macro = icmp eq i32 %firstChar, %macro
-       br i1 %first_is_macro, label %return, label %first_terminating
+; start_macro:
+;       %macro_result = call %string* @start_macro(i8* %input, i32 %firstChar)
+;       ret %string* %macro_result
 
-first_terminating:
-       %first_is_term = icmp eq i32 %firstChar, %term
-       br i1 %first_is_term, label %return, label %read_next
+; leading_term:
+;        %is_leading_term = icmp eq i32 %firstChar, %term
+;        br i1 %is_leading_term, label %start_term, label %start_token
 
-read_next:
-       %next_char = call i32 @getc(i8* %input)
+; start_term:
+;       %term_result = call %string* @start_term(i8* %input, i32 %firstChar)
+;       ret %string* %term_result
 
-       %eof_ret = call i32 @feof(i8* %input)
-       %is_eof = icmp ne i32 %eof_ret, 0
-       br i1 %is_eof, label %return, label %check_space
+start_token:
+       %tokenHead = call %string* @newString(i32 %firstChar)
+       store %string* %tokenHead, %string** %tokenTail
+       br label %read_token
 
-check_space:
-       %is_ws = icmp eq i32 %next_char, %space
-       br i1 %is_ws, label %return, label %check_newline
+read_token:
+       %nextChar = call i32 @getc(i8* %input)
+       br label %inner_space
 
-check_newline:
-       %is_nl = icmp eq i32 %next_char, %newline
-       br i1 %is_nl, label %return, label %check_macro
+inner_space:
+       %is_inner_ws = icmp eq i32 %nextChar, %space
+       br i1 %is_inner_ws, label %finalize_token, label %inner_newline
 
-; This will need to be configurable, in order to support reader
-; macros.
-check_macro:
-       %is_macro = icmp eq i32 %next_char, %macro
-       br i1 %is_macro, label %terminate, label %check_terminating
+inner_newline:
+       %is_inner_nl = icmp eq i32 %nextChar, %newline
+       br i1 %is_inner_nl, label %finalize_token, label %append_token
 
-check_terminating:
-       %is_term = icmp eq i32 %next_char, %term
-       br i1 %is_term, label %terminate, label %process
-
-terminate:
-       call i32 @ungetc(i32 %next_char, i8* %input)
-       br label %return
-
-process:
+append_token:
        %oldTail = load %string** %tokenTail
-       %newTail = call %string* @appendChar(%string* %oldTail, i32 %next_char)
+       %newTail = call %string* @appendChar(%string* %oldTail, i32 %nextChar)
        store %string* %newTail, %string** %tokenTail
-       br label %read_next
+       br label %read_token
 
-return_null:
-       ret %string* null
-
-return:
-       ret %string* %newHead
+finalize_token:
+       ret %string* %tokenHead
 }
 
-define void @read(i8* %input) {
-entry:
-       br label %read_next
+define i32 @main(i32 %argc, i8** %argv) {
+       %arg1Ptr = getelementptr i8** %argv, i64 1
+       %arg1Addr = load i8** %arg1Ptr
 
-read_next:
-       %eof_ret = call i32 @feof(i8* %input)
-       %is_eof = icmp ne i32 %eof_ret, 0
-       br i1 %is_eof, label %return, label %process
-
-process:
-       %nextToken = call %string* @getNextToken(i8* %input)
-
-       %is_null = icmp eq %string* %nextToken, null
-       br i1 %is_null, label %return, label %print
-
-print:
-       call void @printString(%string* %nextToken)
-       br label %read_next
-
-return:
-      ret void
-}
-
-define i32 @main() {
-       %cast_filename = getelementptr [13 x i8]* @.str, i64 0, i64 0
        %cast_open_mode = getelementptr [2 x i8]* @.open_mode, i64 0, i64 0
-       %input = call i8* @fopen(i8* %cast_filename, i8* %cast_open_mode)
+       %input = call i8* @fopen(i8* %arg1Addr, i8* %cast_open_mode)
 
-       call void @read(i8* %input)
+       %token = call %string* @read(i8* %input)
+       call void @printString(%string* %token)
 
        ret i32 0
 }
