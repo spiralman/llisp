@@ -18,7 +18,7 @@ declare i32 @ungetc(i32, i8* nocapture) nounwind
 
 declare %object* @newStringObject(i32)
 declare void @appendChar(%object*, i32)
-declare void @printString(%object*)
+declare void @print(%object*)
 
 declare i32 @putchar(i32) nounwind
 
@@ -113,7 +113,7 @@ define i32 @main(i32 %argc, i8** %argv) {
        %input = call i8* @fopen(i8* %arg1Addr, i8* %cast_open_mode)
 
        %token = call %object* @read(i8* %input)
-       call void @printString(%object* %token)
+       call void @print(%object* %token)
 
        ret i32 0
 }

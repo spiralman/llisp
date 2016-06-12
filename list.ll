@@ -1,5 +1,7 @@
+@.nil_repr = private unnamed_addr constant [4 x i8] c"nil\00"
+
 declare i8* @malloc(i32) nounwind
-declare i32 @puts(i8*) nounwind
+declare i32 @putchar(i32) nounwind
 
 ; Tag values:
 ; 0 - List
@@ -69,12 +71,58 @@ append_char:
        ret void
 }
 
-define void @printString(%object* %obj) {
-       %stringSpacePtr = getelementptr %object* %obj, i32 0, i32 1
-       %stringSpace = load i8** %stringSpacePtr
+define void @printString(i8* %str) {
+       %stringPosPtr = alloca i32
 
-       call i32 @puts(i8* %stringSpace)
+       store i32 0, i32* %stringPosPtr
+       br label %put_next
 
+put_next:
+       %stringPos = load i32* %stringPosPtr
+       %stringTail = getelementptr i8* %str, i32 %stringPos
+
+       %stringVal = load i8* %stringTail
+
+       %is_null = icmp eq i8 0, %stringVal
+       br i1 %is_null, label %done, label %print
+
+print:
+       %stringI = zext i8 %stringVal to i32
+       call i32 @putchar(i32 %stringI)
+
+       %stringPosInc = add i32 1, %stringPos
+       store i32 %stringPosInc, i32* %stringPosPtr
+       br label %put_next
+
+done:
+       ret void
+}
+
+define void @print(%object* %obj) {
+       %is_nil = icmp eq %object* %obj, null
+       br i1 %is_nil, label %print_nil, label %decode_obj
+
+print_nil:
+       %nil_repr = getelementptr [4 x i8]* @.nil_repr, i32 0, i32 0
+       call void @printString(i8* %nil_repr)
+       br label %finalize
+
+decode_obj:
+       %tagPtr = getelementptr %object* %obj, i32 0, i32 0
+       %tag = load i32* %tagPtr
+
+       %valPtr = getelementptr %object* %obj, i32 0, i32 1
+       %val = load i8** %valPtr
+
+       %is_string = icmp eq i32 %tag, 1
+       br i1 %is_string, label %print_string, label %finalize
+
+print_string:
+       call void @printString(i8* %val)
+       br label %finalize
+
+finalize:
+       call i32 @putchar(i32 10)
        ret void
 }
 
@@ -86,7 +134,7 @@ define %object* @cons(%object* %head, %object* %tail) {
        %listSpace = call i8* @malloc(i32 %listSizeI)
        %listPtr = bitcast i8* %listSpace to %list*
 
-        %valPtr = getelementptr %list* %listPtr, i32 0, i32 0
+       %valPtr = getelementptr %list* %listPtr, i32 0, i32 0
        store %object* %head, %object** %valPtr
 
        %nextPtr = getelementptr %list* %listPtr, i32 0, i32 1
