@@ -13,7 +13,7 @@ for TEST_FILE in `ls tests/test-*.llisp`; do
         echo -n "."
     else
         FAILURES=$(($FAILURES + 1))
-        FAILURE_OUT="$(FAILURE_OUT)Failure in $TEST_FILE:\n\n$DIFF\n"
+        FAILURE_OUT="${FAILURE_OUT}\nFailure in ${TEST_FILE}:\n\n${DIFF}\n"
         echo -n "F"
     fi
 done
@@ -24,8 +24,8 @@ then
     echo -e "\nDone"
 else
     echo -e "\n"
-    printf "$FAILURE_OUT"
-    echo -e "\n$FAILURES of $TESTS Tests Failed"
+    printf "${FAILURE_OUT}"
+    echo -e "\n${FAILURES} of ${TESTS} Tests Failed"
 
     exit 1
 fi
