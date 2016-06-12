@@ -4,9 +4,15 @@ declare i32 @puts(i8*) nounwind
 ; Tag values:
 ; 0 - List
 ; 1 - String
-%object = type { i32, i8* }
+%object = type {
+        i32,  ; Tag
+        i8*   ; Value (may be bitcast, if it safely fits in a pointer)
+}
 
-%list = type { %list*, %object*, i32 }
+%list = type {
+      %object*,  ; Value (null on last element)
+      %object*   ; Next node (null on last element)
+}
 
 define %object* @newObject(i32 %tag, i8* %val) {
        %objSizePtr = getelementptr %object* null, i32 1
@@ -22,12 +28,6 @@ define %object* @newObject(i32 %tag, i8* %val) {
        store i8* %val, i8** %valPtr
 
        ret %object* %objPtr
-}
-
-define %object* @newListObject(%list* %val) {
-       %genericVal = bitcast %list* %val to i8*
-       %objectPtr = call %object* @newObject(i32 0, i8* %genericVal)
-       ret %object* %objectPtr
 }
 
 define %object* @newStringObject(i32 %size) {
@@ -78,28 +78,20 @@ define void @printString(%object* %obj) {
        ret void
 }
 
-define %list* @newList(%object* %val) {
+; Cons A with null to create a new list
+define %object* @cons(%object* %head, %object* %tail) {
        %listSize = getelementptr %list* null, i32 1
        %listSizeI = ptrtoint %list* %listSize to i32
 
        %listSpace = call i8* @malloc(i32 %listSizeI)
        %listPtr = bitcast i8* %listSpace to %list*
 
-       %nextPtr = getelementptr %list* %listPtr, i32 0, i32 0
-       store %list* null, %list** %nextPtr
+        %valPtr = getelementptr %list* %listPtr, i32 0, i32 0
+       store %object* %head, %object** %valPtr
 
-       %valPtr = getelementptr %list* %listPtr, i32 0, i32 1
-       store %object* %val, %object** %valPtr
+       %nextPtr = getelementptr %list* %listPtr, i32 0, i32 1
+       store %object* %tail, %object** %nextPtr
 
-       ret %list* %listPtr
-}
-
-; Returns new tail node of list
-define %list* @appendVal(%list* %oldTail, %object* %val) {
-       %newTail = call %list* @newList(%object* %val)
-
-       %nextPtr = getelementptr %list* %oldTail, i32 0, i32 0
-       store %list* %newTail, %list** %nextPtr
-
-       ret %list* %newTail
+       %objectPtr = call %object* @newObject(i32 0, i8* %listSpace)
+       ret %object* %objectPtr
 }

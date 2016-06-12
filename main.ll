@@ -4,7 +4,8 @@
 @.macro = private unnamed_addr constant i32 40
 @.term = private unnamed_addr constant i32 41
 
-%string = type opaque
+@macro_table = linkonce global [ 256 x %object* (i8*, i32)* ] zeroinitializer
+
 %list = type opaque
 %object = type opaque
 
@@ -20,6 +21,14 @@ declare void @appendChar(%object*, i32)
 declare void @printString(%object*)
 
 declare i32 @putchar(i32) nounwind
+
+define %object* @start_list(i8* %input, i32 %char) {
+       ret %object* null
+}
+
+define %object* @end_list(i8* %input, i32 %char) {
+       ret %object* null
+}
 
 define %object* @read(i8* %input) {
        %space = load i32* @.space
@@ -39,24 +48,19 @@ leading_space:
 
 leading_newline:
        %is_leading_nl = icmp eq i32 %firstChar, %newline
-       br i1 %is_leading_nl, label %read_first, label %start_token
+       br i1 %is_leading_nl, label %read_first, label %leading_macro_check
 
-; TODO: Check for leading macro/term i.e. ( or )
-; leading_macro:
-;        %is_leading_macro = icmp eq i32 %firstChar, %macro
-;        br i1 %is_leading_macro, label %start_macro, label %leading_term
+leading_macro_check:
+       %leadingMacroFnPtrPtr = getelementptr [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 %firstChar
+       %leadingMacroFnValPtr = bitcast %object* (i8*, i32)** %leadingMacroFnPtrPtr to i8**
+       %leadingMacroFnVal = load i8** %leadingMacroFnValPtr
+       %is_not_leading_macro = icmp eq i8* null, %leadingMacroFnVal
+       br i1 %is_not_leading_macro, label %start_token, label %leading_macro
 
-; start_macro:
-;       %macro_result = call %string* @start_macro(i8* %input, i32 %firstChar)
-;       ret %string* %macro_result
-
-; leading_term:
-;        %is_leading_term = icmp eq i32 %firstChar, %term
-;        br i1 %is_leading_term, label %start_term, label %start_token
-
-; start_term:
-;       %term_result = call %string* @start_term(i8* %input, i32 %firstChar)
-;       ret %string* %term_result
+leading_macro:
+       %leadingMacroFnPtr = bitcast i8* %leadingMacroFnVal to %object* (i8*, i32)*
+       %leading_macro_res = call %object* %leadingMacroFnPtr(i8* %input, i32 %firstChar)
+       ret %object* %leading_macro_res
 
 start_token:
        %token = call %object* @newStringObject(i32 64)
@@ -74,7 +78,18 @@ inner_space:
 
 inner_newline:
        %is_inner_nl = icmp eq i32 %nextChar, %newline
-       br i1 %is_inner_nl, label %finalize_token, label %append_token
+       br i1 %is_inner_nl, label %finalize_token, label %inner_macro_check
+
+inner_macro_check:
+       %innerMacroFnPtrPtr = getelementptr [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 %nextChar
+       %innerMacroFnValPtr = bitcast %object* (i8*, i32)** %innerMacroFnPtrPtr to i8**
+       %innerMacroFnVal = load i8** %innerMacroFnValPtr
+       %is_not_inner_macro = icmp eq i8* null, %innerMacroFnVal
+       br i1 %is_not_inner_macro, label %append_token, label %inner_macro
+
+inner_macro:
+       call i32 @ungetc(i32 %nextChar, i8* %input)
+       br label %finalize_token
 
 append_token:
        call void @appendChar(%object* %token, i32 %nextChar)
@@ -85,6 +100,12 @@ finalize_token:
 }
 
 define i32 @main(i32 %argc, i8** %argv) {
+       %startListPtr = getelementptr [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 40
+       store %object* (i8*, i32)* @start_list, %object* (i8*, i32)** %startListPtr
+
+       %endListPtr = getelementptr [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 41
+       store %object* (i8*, i32)* @end_list, %object* (i8*, i32)** %endListPtr
+
        %arg1Ptr = getelementptr i8** %argv, i64 1
        %arg1Addr = load i8** %arg1Ptr
 
