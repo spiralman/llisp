@@ -71,6 +71,33 @@ append_char:
        ret void
 }
 
+define void @printList(i8* %listPtr) {
+       %cellPtr = bitcast i8* %listPtr to %list*
+
+       %headPtr = getelementptr %list* %cellPtr, i32 0, i32 0
+       %head = load %object** %headPtr
+
+       call void @print(%object* %head)
+
+       %tailPtr = getelementptr %list* %cellPtr, i32 0, i32 1
+       %tail = load %object** %tailPtr
+
+       %is_end = icmp eq %object* %tail, null
+       br i1 %is_end, label %finalize, label %print_next
+
+print_next:
+       call i32 @putchar(i32 32)
+
+       %tailValPtr = getelementptr %object* %tail, i32 0, i32 1
+       %tailVal = load i8** %tailValPtr
+
+       call void @printList(i8* %tailVal)
+       br label %finalize
+
+finalize:
+       ret void
+}
+
 define void @printString(i8* %str) {
        %stringPosPtr = alloca i32
 
@@ -114,15 +141,20 @@ decode_obj:
        %valPtr = getelementptr %object* %obj, i32 0, i32 1
        %val = load i8** %valPtr
 
-       %is_string = icmp eq i32 %tag, 1
-       br i1 %is_string, label %print_string, label %finalize
+       switch i32 %tag, label %finalize [ i32 0, label %print_list
+                                          i32 1, label %print_string ]
+
+print_list:
+       call i32 @putchar(i32 40)
+       call void @printList(i8* %val)
+       call i32 @putchar(i32 41)
+       br label %finalize
 
 print_string:
        call void @printString(i8* %val)
        br label %finalize
 
 finalize:
-       call i32 @putchar(i32 10)
        ret void
 }
 

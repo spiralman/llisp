@@ -18,12 +18,23 @@ declare i32 @ungetc(i32, i8* nocapture) nounwind
 
 declare %object* @newStringObject(i32)
 declare void @appendChar(%object*, i32)
+declare %object* @cons(%object*, %object*)
 declare void @print(%object*)
 
 declare i32 @putchar(i32) nounwind
 
-define %object* @start_list(i8* %input, i32 %char) {
+define %object* @read_list(i8* %input, i32 %char) {
+       %nextHead = call %object* @read(i8* %input)
+       %is_end = icmp eq %object* %nextHead, null
+       br i1 %is_end, label %at_end, label %read_tail
+at_end:
        ret %object* null
+
+read_tail:
+       %nextTail = call %object* @read_list(i8* %input, i32 %char)
+       %list = call %object* @cons(%object* %nextHead, %object* %nextTail)
+
+       ret %object* %list
 }
 
 define %object* @end_list(i8* %input, i32 %char) {
@@ -101,7 +112,7 @@ finalize_token:
 
 define i32 @main(i32 %argc, i8** %argv) {
        %startListPtr = getelementptr [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 40
-       store %object* (i8*, i32)* @start_list, %object* (i8*, i32)** %startListPtr
+       store %object* (i8*, i32)* @read_list, %object* (i8*, i32)** %startListPtr
 
        %endListPtr = getelementptr [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 41
        store %object* (i8*, i32)* @end_list, %object* (i8*, i32)** %endListPtr
@@ -114,6 +125,7 @@ define i32 @main(i32 %argc, i8** %argv) {
 
        %token = call %object* @read(i8* %input)
        call void @print(%object* %token)
+       call i32 @putchar(i32 10)
 
        ret i32 0
 }
