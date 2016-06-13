@@ -18,10 +18,9 @@ for TEST_FILE in `ls tests/test-*.llisp`; do
     fi
 done
 
-
 if [ $FAILURES == 0 ]
 then
-    echo -e "\nDone"
+    echo -e "\nSuccess!"
 else
     echo -e "\n"
     printf "${FAILURE_OUT}"
@@ -29,3 +28,5 @@ else
 
     exit 1
 fi
+
+echo -e "\nRan ${TESTS} tests"
