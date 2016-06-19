@@ -5,16 +5,28 @@ FAILURES=0
 
 FAILURE_OUT=""
 
-for TEST_FILE in `ls tests/test-*.llisp`; do
-    TESTS=$(($TESTS + 1))
-	  DIFF=$(lli test-reader.bc $TEST_FILE | diff -u $TEST_FILE.out -)
-    if [ $? == 0 ]
+test_subsystem() {
+    SUBSYSTEM=$1
+    for TEST_FILE in `ls tests/${SUBSYSTEM}/test-*.llisp`; do
+        TESTS=$(($TESTS + 1))
+	      DIFF=$(lli test-${SUBSYSTEM}.bc $TEST_FILE | diff -u $TEST_FILE.out -)
+        if [ $? == 0 ]
+        then
+            echo -n "."
+        else
+            FAILURES=$(($FAILURES + 1))
+            FAILURE_OUT="${FAILURE_OUT}\nFailure in ${TEST_FILE}:\n\n${DIFF}\n"
+            echo -n "F"
+        fi
+    done
+}
+
+for SUBSYSTEM in `ls tests`; do
+    if [ -d "tests/$SUBSYSTEM" ]
     then
-        echo -n "."
+        test_subsystem $SUBSYSTEM
     else
-        FAILURES=$(($FAILURES + 1))
-        FAILURE_OUT="${FAILURE_OUT}\nFailure in ${TEST_FILE}:\n\n${DIFF}\n"
-        echo -n "F"
+        echo "Not a subsystem $SUBSYSTEM"
     fi
 done
 
