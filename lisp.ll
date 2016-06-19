@@ -104,3 +104,14 @@ append_token:
 finalize_token:
        ret %object* %token
 }
+
+define void @init() {
+       ;; This could be done statically, but this is less typing
+       %startListPtr = getelementptr [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 40
+       store %object* (i8*, i32)* @read_list, %object* (i8*, i32)** %startListPtr
+
+       %endListPtr = getelementptr [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 41
+       store %object* (i8*, i32)* @end_list, %object* (i8*, i32)** %endListPtr
+
+       ret void
+}
