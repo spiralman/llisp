@@ -7,7 +7,7 @@ FAILURE_OUT=""
 
 for TEST_FILE in `ls tests/test-*.llisp`; do
     TESTS=$(($TESTS + 1))
-	  DIFF=$(lli llisp.bc $TEST_FILE | diff -u $TEST_FILE.out -)
+	  DIFF=$(lli test-reader.bc $TEST_FILE | diff -u $TEST_FILE.out -)
     if [ $? == 0 ]
     then
         echo -n "."
