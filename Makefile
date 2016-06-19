@@ -1,4 +1,4 @@
-SOURCES = main.ll list.ll
+SOURCES = main.ll list.ll lisp.ll
 BITCODE = $(SOURCES:.ll=.bc)
 
 .PHONY: clean test
