@@ -1,13 +1,13 @@
-SOURCES = list.ll lisp.ll
+SOURCES = list.ll lisp.ll eval.ll
 BITCODE = $(SOURCES:.ll=.bc)
 
-TEST_HARNESS_SOURCES = test-reader-main.ll
+TEST_HARNESS_SOURCES = test-reader-main.ll test-eval-main.ll
 TEST_HARNESS_BITCODE = $(TEST_HARNESS_SOURCES:.ll=.bc)
 TEST_HARNESSES = $(TEST_HARNESS_BITCODE:%-main.bc=%.bc)
 
 .PHONY: clean test
 
-all: test-reader.bc
+all: test-reader.bc test-eval.bc
 
 %.bc: %.ll
 	llvm-as -o $@ $<
