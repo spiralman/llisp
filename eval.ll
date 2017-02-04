@@ -23,12 +23,12 @@ decode_obj:
        %val = load i8** %valPtr
 
        switch i32 %tag, label %finalize [ i32 0, label %eval_list
-                                          i32 1, label %eval_string ]
+                                          i32 1, label %eval_token ]
 
 eval_list:
        ret %object* null
 
-eval_string:
+eval_token:
        ret %object* %obj
 
 finalize:

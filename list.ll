@@ -5,7 +5,7 @@ declare i32 @putchar(i32) nounwind
 
 ; Tag values:
 ; 0 - List
-; 1 - String
+; 1 - Token
 %object = type {
         i32,  ; Tag
         i8*   ; Value (may be bitcast, if it safely fits in a pointer)
@@ -32,11 +32,11 @@ define %object* @newObject(i32 %tag, i8* %val) {
        ret %object* %objPtr
 }
 
-define %object* @newStringObject(i32 %size) {
-       %stringSpace = call i8* @malloc(i32 %size)
-       store i8 0, i8* %stringSpace
+define %object* @newTokenObject(i32 %size) {
+       %tokenSpace = call i8* @malloc(i32 %size)
+       store i8 0, i8* %tokenSpace
 
-       %objectPtr = call %object* @newObject(i32 1, i8* %stringSpace)
+       %objectPtr = call %object* @newObject(i32 1, i8* %tokenSpace)
        ret %object* %objectPtr
 }
 
@@ -98,27 +98,27 @@ finalize:
        ret void
 }
 
-define void @printString(i8* %str) {
-       %stringPosPtr = alloca i32
+define void @printToken(i8* %str) {
+       %tokenPosPtr = alloca i32
 
-       store i32 0, i32* %stringPosPtr
+       store i32 0, i32* %tokenPosPtr
        br label %put_next
 
 put_next:
-       %stringPos = load i32* %stringPosPtr
-       %stringTail = getelementptr i8* %str, i32 %stringPos
+       %tokenPos = load i32* %tokenPosPtr
+       %tokenTail = getelementptr i8* %str, i32 %tokenPos
 
-       %stringVal = load i8* %stringTail
+       %tokenVal = load i8* %tokenTail
 
-       %is_null = icmp eq i8 0, %stringVal
+       %is_null = icmp eq i8 0, %tokenVal
        br i1 %is_null, label %done, label %print
 
 print:
-       %stringI = zext i8 %stringVal to i32
-       call i32 @putchar(i32 %stringI)
+       %tokenI = zext i8 %tokenVal to i32
+       call i32 @putchar(i32 %tokenI)
 
-       %stringPosInc = add i32 1, %stringPos
-       store i32 %stringPosInc, i32* %stringPosPtr
+       %tokenPosInc = add i32 1, %tokenPos
+       store i32 %tokenPosInc, i32* %tokenPosPtr
        br label %put_next
 
 done:
@@ -131,7 +131,7 @@ define void @print(%object* %obj) {
 
 print_nil:
        %nil_repr = getelementptr [4 x i8]* @.nil_repr, i32 0, i32 0
-       call void @printString(i8* %nil_repr)
+       call void @printToken(i8* %nil_repr)
        br label %finalize
 
 decode_obj:
@@ -142,7 +142,7 @@ decode_obj:
        %val = load i8** %valPtr
 
        switch i32 %tag, label %finalize [ i32 0, label %print_list
-                                          i32 1, label %print_string ]
+                                          i32 1, label %print_token ]
 
 print_list:
        call i32 @putchar(i32 40)
@@ -150,8 +150,8 @@ print_list:
        call i32 @putchar(i32 41)
        br label %finalize
 
-print_string:
-       call void @printString(i8* %val)
+print_token:
+       call void @printToken(i8* %val)
        br label %finalize
 
 finalize:
