@@ -7,44 +7,10 @@ declare %object* @rest(%object*)
 
 declare i1 @isNil(%object*)
 
+declare i1 @tokenMatches(%object*, i8*)
+
 declare i32 @tag(%object*)
 declare i8* @unbox(%object*)
-
-define i1 @tokenMatches(%object* %token, i8* %match) {
-       %str = call i8* @unbox(%object* %token)
-
-       %tokenPosPtr = alloca i32
-
-       store i32 0, i32* %tokenPosPtr
-       br label %check_next
-
-check_next:
-       %tokenPos = load i32* %tokenPosPtr
-       %tokenTail = getelementptr i8* %str, i32 %tokenPos
-       %matchTail = getelementptr i8* %match, i32 %tokenPos
-
-       %tokenVal = load i8* %tokenTail
-       %matchVal = load i8* %matchTail
-
-       %is_eq = icmp eq i8 %matchVal, %tokenVal
-       br i1 %is_eq, label %check_null, label %unequal
-
-; Since they are equal, we only need to check one
-check_null:
-       %is_null = icmp eq i8 0, %tokenVal
-       br i1 %is_null, label %equal, label %iterate
-
-iterate:
-       %tokenPosInc = add i32 1, %tokenPos
-       store i32 %tokenPosInc, i32* %tokenPosPtr
-       br label %check_next
-
-equal:
-       ret i1 true
-
-unequal:
-       ret i1 false
-}
 
 define %object* @evalIf(%object* %forms) {
        %cond = call %object* @first(%object* %forms)
