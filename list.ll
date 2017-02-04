@@ -29,10 +29,11 @@ check_nil:
 
 ; returns:
 ; Object: tag list
-;         value -> List: value -> head
-;                        next -> tail (Object)
+;         value -> List: value -> head (Object or nil)
+;                        next -> tail (Object of type list)
 ;
-; Cons A with null to create a new list
+; Cons null with null to create an empty list/nil.
+; Cons Obj with nil to create a list of 1 element.
 define %object* @cons(%object* %head, %object* %tail) {
        %listSize = getelementptr %list* null, i32 1
        %listSizeI = ptrtoint %list* %listSize to i32
