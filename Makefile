@@ -20,3 +20,7 @@ clean:
 
 test: $(TEST_HARNESSES)
 	./run-tests.sh
+
+count:
+	@echo "Total non-comment, non-blank source lines:"
+	@./count.sh $(SOURCES)
