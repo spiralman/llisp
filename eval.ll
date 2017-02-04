@@ -13,6 +13,8 @@
 declare %object* @first(%object*)
 declare %object* @rest(%object*)
 
+declare void @print(%object*)
+
 define i1 @tokenMatches(%object* %token, i8* %match) {
        %strPtr = getelementptr %object* %token, i32 0, i32 1
        %str = load i8** %strPtr
@@ -51,6 +53,28 @@ unequal:
 }
 
 define %object* @evalIf(%object* %forms) {
+       %cond = call %object* @first(%object* %forms)
+       %branches = call %object* @rest(%object* %forms)
+
+       %condRes = call %object* @eval(%object* %cond)
+
+       %is_nil = icmp eq %object* %condRes, null
+       br i1 %is_nil, label %eval_else, label %compare_val
+
+compare_val:
+       %valPtr = getelementptr %object* %condRes, i32 0, i32 1
+       %val = load i8** %valPtr
+       %is_valNil = icmp eq i8* %val, null
+       br i1 %is_valNil, label %eval_else, label %eval_then
+
+eval_then:
+       %then = call %object* @first(%object* %branches)
+       %thenRes = call %object* @eval(%object* %then)
+       ret %object* %thenRes
+
+eval_else:
+       %else = call %object* @rest(%object* %branches)
+       %elseRes = call %object* @eval(%object* %else)
        ret %object* null
 }
 

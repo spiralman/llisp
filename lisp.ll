@@ -16,6 +16,7 @@ declare i32 @ungetc(i32, i8* nocapture) nounwind
 
 declare %object* @newTokenObject(i32)
 declare void @appendChar(%object*, i32)
+declare %object* @newObject(i32, i8*)
 declare %object* @cons(%object*, %object*)
 
 define %object* @read_list(i8* %input, i32 %char) {
@@ -23,7 +24,8 @@ define %object* @read_list(i8* %input, i32 %char) {
        %is_end = icmp eq %object* %nextHead, null
        br i1 %is_end, label %at_end, label %read_tail
 at_end:
-       ret %object* null
+       %nil = call %object* @cons(%object* null, %object* null)
+       ret %object* %nil
 
 read_tail:
        %nextTail = call %object* @read_list(i8* %input, i32 %char)

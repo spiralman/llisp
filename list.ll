@@ -71,20 +71,50 @@ append_char:
        ret void
 }
 
-define void @printList(%object* %obj) {
+; (foo) -> (cons foo (cons nil nil))
+; obj -> list -> obj -> foo
+;                obj -> list -> null
+;                               null
+
+; obj -> list -> obj -> foo
+;                obj -> list -> obj -> bar
+;                               obj -> list -> null
+;                                              null
+define void @printListElems(%object* %obj) {
        %head = call %object* @first(%object* %obj)
-
-       call void @print(%object* %head)
-
-       %tail = call %object* @rest(%object* %obj)
-
-       %is_end = icmp eq %object* %tail, null
+       %is_end = icmp eq %object* %head, null
        br i1 %is_end, label %finalize, label %print_next
 
 print_next:
        call i32 @putchar(i32 32)
+       call void @print(%object* %head)
 
-       call void @printList(%object* %tail)
+       %tail = call %object* @rest(%object* %obj)
+
+       call void @printListElems(%object* %tail)
+       br label %finalize
+
+finalize:
+       ret void
+}
+
+define void @printList(%object* %obj) {
+       %head = call %object* @first(%object* %obj)
+       %is_nil = icmp eq %object* %head, null
+       br i1 %is_nil, label %print_nil, label %print_list
+
+print_nil:
+       %nil_repr = getelementptr [4 x i8]* @.nil_repr, i32 0, i32 0
+       call void @printToken(i8* %nil_repr)
+       br label %finalize
+
+print_list:
+       call i32 @putchar(i32 40)
+       call void @print(%object* %head)
+
+       %tail = call %object* @rest(%object* %obj)
+       call void @printListElems(%object* %tail)
+       call i32 @putchar(i32 41)
        br label %finalize
 
 finalize:
@@ -120,12 +150,7 @@ done:
 
 define void @print(%object* %obj) {
        %is_nil = icmp eq %object* %obj, null
-       br i1 %is_nil, label %print_nil, label %decode_obj
-
-print_nil:
-       %nil_repr = getelementptr [4 x i8]* @.nil_repr, i32 0, i32 0
-       call void @printToken(i8* %nil_repr)
-       br label %finalize
+       br i1 %is_nil, label %finalize, label %decode_obj
 
 decode_obj:
        %tagPtr = getelementptr %object* %obj, i32 0, i32 0
@@ -138,9 +163,7 @@ decode_obj:
                                           i32 1, label %print_token ]
 
 print_list:
-       call i32 @putchar(i32 40)
        call void @printList(%object* %obj)
-       call i32 @putchar(i32 41)
        br label %finalize
 
 print_token:
@@ -149,6 +172,13 @@ print_token:
 
 finalize:
        ret void
+}
+
+define i8* @unbox(%object* %obj) {
+       %valPtr = getelementptr %object* %obj, i32 0, i32 1
+       %val = load i8** %valPtr
+
+       ret i8* %val
 }
 
 ; returns:
