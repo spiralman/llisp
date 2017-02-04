@@ -81,6 +81,13 @@ define i8* @unbox(%object* %obj) {
        ret i8* %val
 }
 
+define i1 @isNil(%object* %obj) {
+       %head = call %object* @first(%object* %obj)
+       %is_nil = icmp eq %object* %head, null
+
+       ret i1 %is_nil
+}
+
 ; returns:
 ; Object: tag list
 ;         value -> List: value -> head

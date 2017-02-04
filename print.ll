@@ -6,6 +6,8 @@ declare i32 @putchar(i32) nounwind
 declare %object* @first(%object*)
 declare %object* @rest(%object*)
 
+declare i1 @isNil(%object*)
+
 declare i32 @tag(%object*)
 declare i8* @unbox(%object*)
 
@@ -39,8 +41,7 @@ finalize:
 }
 
 define void @printList(%object* %obj) {
-       %head = call %object* @first(%object* %obj)
-       %is_nil = icmp eq %object* %head, null
+       %is_nil = call i1 @isNil(%object* %obj)
        br i1 %is_nil, label %print_nil, label %print_list
 
 print_nil:
@@ -50,6 +51,7 @@ print_nil:
 
 print_list:
        call i32 @putchar(i32 40)
+       %head = call %object* @first(%object* %obj)
        call void @print(%object* %head)
 
        %tail = call %object* @rest(%object* %obj)

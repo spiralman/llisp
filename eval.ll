@@ -1,23 +1,17 @@
 @.form_if = private unnamed_addr constant [ 3 x i8 ] c"if\00"
 
-%object = type {
-        i32,  ; Tag
-        i8*   ; Value (may be bitcast, if it safely fits in a pointer)
-}
-
-%list = type {
-      %object*,  ; Value (null on last element)
-      %object*   ; Next node (null on last element)
-}
+%object = type opaque
 
 declare %object* @first(%object*)
 declare %object* @rest(%object*)
 
-declare void @print(%object*)
+declare i1 @isNil(%object*)
+
+declare i32 @tag(%object*)
+declare i8* @unbox(%object*)
 
 define i1 @tokenMatches(%object* %token, i8* %match) {
-       %strPtr = getelementptr %object* %token, i32 0, i32 1
-       %str = load i8** %strPtr
+       %str = call i8* @unbox(%object* %token)
 
        %tokenPosPtr = alloca i32
 
@@ -59,26 +53,37 @@ define %object* @evalIf(%object* %forms) {
        %condRes = call %object* @eval(%object* %cond)
 
        %is_nil = icmp eq %object* %condRes, null
-       br i1 %is_nil, label %eval_else, label %compare_val
+       br i1 %is_nil, label %check_else, label %compare_val
 
 compare_val:
-       %valPtr = getelementptr %object* %condRes, i32 0, i32 1
-       %val = load i8** %valPtr
-       %is_valNil = icmp eq i8* %val, null
-       br i1 %is_valNil, label %eval_else, label %eval_then
+       %is_valNil = call i1 @isNil(%object* %condRes)
+       br i1 %is_valNil, label %check_else, label %eval_then
 
 eval_then:
        %then = call %object* @first(%object* %branches)
        %thenRes = call %object* @eval(%object* %then)
        ret %object* %thenRes
 
+check_else:
+       %elseList = call %object* @rest(%object* %branches)
+
+       %elseNil = call i1 @isNil(%object* %elseList)
+       br i1 %elseNil, label %no_else, label %eval_else
+
+no_else:
+      ret %object* %elseList
+
 eval_else:
-       %else = call %object* @rest(%object* %branches)
+       %else = call %object* @first(%object* %elseList)
        %elseRes = call %object* @eval(%object* %else)
-       ret %object* null
+       ret %object* %elseRes
 }
 
 define %object* @evalList(%object* %forms) {
+       %is_nil = call i1 @isNil(%object* %forms)
+       br i1 %is_nil, label %done, label %eval_forms
+
+eval_forms:
        %head = call %object* @first(%object* %forms)
        %tail = call %object* @rest(%object* %forms)
 
@@ -92,22 +97,13 @@ eval_if:
        ret %object* %if_res
 
 done:
-       ret %object* null
+       ret %object* %forms
 }
 
 define %object* @eval(%object* %obj) {
-       %is_nil = icmp eq %object* %obj, null
-       br i1 %is_nil, label %eval_nil, label %decode_obj
+       %tag = call i32 @tag(%object* %obj)
 
-eval_nil:
-       ret %object* null
-
-decode_obj:
-       %tagPtr = getelementptr %object* %obj, i32 0, i32 0
-       %tag = load i32* %tagPtr
-
-       %valPtr = getelementptr %object* %obj, i32 0, i32 1
-       %val = load i8** %valPtr
+       %val = call i8* @unbox(%object* %obj)
 
        switch i32 %tag, label %finalize [ i32 0, label %eval_list
                                           i32 1, label %eval_token ]
