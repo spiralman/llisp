@@ -71,16 +71,12 @@ append_char:
        ret void
 }
 
-define void @printList(i8* %listPtr) {
-       %cellPtr = bitcast i8* %listPtr to %list*
-
-       %headPtr = getelementptr %list* %cellPtr, i32 0, i32 0
-       %head = load %object** %headPtr
+define void @printList(%object* %obj) {
+       %head = call %object* @first(%object* %obj)
 
        call void @print(%object* %head)
 
-       %tailPtr = getelementptr %list* %cellPtr, i32 0, i32 1
-       %tail = load %object** %tailPtr
+       %tail = call %object* @rest(%object* %obj)
 
        %is_end = icmp eq %object* %tail, null
        br i1 %is_end, label %finalize, label %print_next
@@ -88,10 +84,7 @@ define void @printList(i8* %listPtr) {
 print_next:
        call i32 @putchar(i32 32)
 
-       %tailValPtr = getelementptr %object* %tail, i32 0, i32 1
-       %tailVal = load i8** %tailValPtr
-
-       call void @printList(i8* %tailVal)
+       call void @printList(%object* %tail)
        br label %finalize
 
 finalize:
@@ -146,7 +139,7 @@ decode_obj:
 
 print_list:
        call i32 @putchar(i32 40)
-       call void @printList(i8* %val)
+       call void @printList(%object* %obj)
        call i32 @putchar(i32 41)
        br label %finalize
 
@@ -158,6 +151,11 @@ finalize:
        ret void
 }
 
+; returns:
+; Object: tag list
+;         value -> List: value -> head
+;                        next -> tail (Object)
+;
 ; Cons A with null to create a new list
 define %object* @cons(%object* %head, %object* %tail) {
        %listSize = getelementptr %list* null, i32 1
@@ -174,4 +172,28 @@ define %object* @cons(%object* %head, %object* %tail) {
 
        %objectPtr = call %object* @newObject(i32 0, i8* %listSpace)
        ret %object* %objectPtr
+}
+
+define %object* @first(%object* %obj) {
+       %valPtr = getelementptr %object* %obj, i32 0, i32 1
+       %val = load i8** %valPtr
+
+       %cellPtr = bitcast i8* %val to %list*
+
+       %headPtr = getelementptr %list* %cellPtr, i32 0, i32 0
+       %head = load %object** %headPtr
+
+       ret %object* %head
+}
+
+define %object* @rest(%object* %obj) {
+       %valPtr = getelementptr %object* %obj, i32 0, i32 1
+       %val = load i8** %valPtr
+
+       %cellPtr = bitcast i8* %val to %list*
+
+       %tailPtr = getelementptr %list* %cellPtr, i32 0, i32 1
+       %tail = load %object** %tailPtr
+
+       ret %object* %tail
 }

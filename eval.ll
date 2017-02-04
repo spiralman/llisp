@@ -8,6 +8,10 @@
       %object*   ; Next node (null on last element)
 }
 
+define %object* @evalList(%list* %forms) {
+       ret %object* null
+}
+
 define %object* @eval(%object* %obj) {
        %is_nil = icmp eq %object* %obj, null
        br i1 %is_nil, label %eval_nil, label %decode_obj
@@ -26,7 +30,9 @@ decode_obj:
                                           i32 1, label %eval_token ]
 
 eval_list:
-       ret %object* null
+       %listVal = bitcast i8* %val to %list*
+       %listRes = call %object* @evalList(%list* %listVal)
+       ret %object* %listRes
 
 eval_token:
        ret %object* %obj
