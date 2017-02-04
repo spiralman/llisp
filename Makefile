@@ -1,4 +1,4 @@
-SOURCES = list.ll lisp.ll eval.ll print.ll read.ll
+SOURCES = list.ll lisp.ll eval.ll print.ll read.ll object.ll token.ll
 BITCODE = $(SOURCES:.ll=.bc)
 
 TEST_HARNESS_SOURCES = test-reader-main.ll test-eval-main.ll
