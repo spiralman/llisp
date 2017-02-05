@@ -175,7 +175,7 @@ bind_params:
 define %object* @evalCall(%object* %funSym, %object* %params, %object** %env) {
        %nil = load %object** @val_nil
 
-       %funDef = call %object* @resolveSymbol(%object* %funSym, %object** %env)
+       %funDef = call %object* @evalEnv(%object* %funSym, %object** %env)
 
        %no_fun = call i1 @isNil(%object* %funDef)
        br i1 %no_fun, label %ret_nil, label %eval_fun
