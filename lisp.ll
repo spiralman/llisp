@@ -26,8 +26,22 @@ define %object* @mainFile(i32 %argc, i8** %argv) {
        %cast_open_mode = getelementptr [2 x i8]* @.open_mode, i64 0, i64 0
        %input = call i8* @fopen(i8* %arg1Addr, i8* %cast_open_mode)
 
-       %token = call %object* @read(i8* %input)
-       %result = call %object* @eval(%object* %token)
+       %resultPtr = alloca %object*
+       store %object* null, %object** %resultPtr
 
-       ret %object* %result
+       br label %read_eval
+
+read_eval:
+       %token = call %object* @read(i8* %input)
+       %is_eof = icmp eq %object* null, %token
+       br i1 %is_eof, label %ret_result, label %eval_token
+
+eval_token:
+       %result = call %object* @eval(%object* %token)
+       store %object* %result, %object** %resultPtr
+       br label %read_eval
+
+ret_result:
+       %finalResult = load %object** %resultPtr
+       ret %object* %finalResult
 }
