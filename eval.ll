@@ -1,5 +1,6 @@
 @.form_if = private unnamed_addr constant [ 3 x i8 ] c"if\00"
 @.form_define = private unnamed_addr constant [ 7 x i8 ] c"define\00"
+@.form_lambda = private unnamed_addr constant [ 7 x i8 ] c"lambda\00"
 
 @.sym_false = private unnamed_addr constant [ 6 x i8 ] c"false\00"
 @.sym_nil = private unnamed_addr constant [ 4 x i8 ] c"nil\00"
@@ -101,9 +102,42 @@ define %object* @evalDefine(%object* %forms, %object** %env) {
        ret %object* %nil
 }
 
+define %object* @evalLambda(%object* %forms, %object** %env) {
+       ret %object* %forms
+}
+
+define %object* @evalBody(%object* %body, %object** %env) {
+       %nextForm = call %object* @first(%object* %body)
+       %nextRes = call %object* @evalEnv(%object* %nextForm, %object** %env)
+
+       ret %object* %nextRes
+}
+
+define %object* @evalCall(%object* %funSym, %object* %forms, %object** %env) {
+       %curEnvPtr = getelementptr %object** %env, i32 0
+       %curEnv = load %object** %curEnvPtr
+       %funDef = call %object* @lookupSymbol(%object* %funSym, %object* %curEnv)
+
+       %no_fun = call i1 @isNil(%object* %funDef)
+       br i1 %no_fun, label %ret_nil, label %eval_fun
+
+ret_nil:
+       ret %object* %funDef
+
+eval_fun:
+       %argList = call %object* @first(%object* %funDef)
+       %body = call %object* @rest(%object* %funDef)
+
+       %bodyRes = call %object* @evalBody(%object* %body, %object** %env)
+       ret %object* %bodyRes
+}
+
 define %object* @evalList(%object* %forms, %object** %env) {
        %is_nil = call i1 @isNil(%object* %forms)
-       br i1 %is_nil, label %done, label %eval_forms
+       br i1 %is_nil, label %ret_nil, label %eval_forms
+
+ret_nil:
+       ret %object* %forms
 
 eval_forms:
        %head = call %object* @first(%object* %forms)
@@ -122,14 +156,25 @@ check_define:
        %match_define = getelementptr [7 x i8]* @.form_define, i32 0, i32 0
        %is_define = call i1 @tokenMatches(%object* %head, i8* %match_define)
 
-       br i1 %is_define, label %eval_define, label %done
+       br i1 %is_define, label %eval_define, label %check_lambda
 
 eval_define:
        %define_res = call %object* @evalDefine(%object* %tail, %object** %env)
        ret %object* %define_res
 
-done:
-       ret %object* %forms
+check_lambda:
+       %match_lambda = getelementptr [7 x i8]* @.form_lambda, i32 0, i32 0
+       %is_lambda = call i1 @tokenMatches(%object* %head, i8* %match_lambda)
+
+       br i1 %is_lambda, label %eval_lambda, label %eval_call
+
+eval_lambda:
+       %lambda_res = call %object* @evalLambda(%object* %tail, %object** %env)
+       ret %object* %lambda_res
+
+eval_call:
+       %call_res = call %object* @evalCall(%object* %head, %object* %tail, %object** %env)
+       ret %object* %call_res
 }
 
 define %object* @evalEnv(%object* %obj, %object** %env) {
