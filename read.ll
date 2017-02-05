@@ -84,7 +84,9 @@ start_token:
 
 read_token:
        %nextChar = call i32 @getc(i8* %input)
-       br label %inner_space
+       %nextEOF = call i32 @feof(i8* %input)
+       %is_not_nextEOF = icmp eq i32 0, %nextEOF
+       br i1 %is_not_nextEOF, label %inner_space, label %finalize_token
 
 inner_space:
        %is_inner_ws = icmp eq i32 %nextChar, %space
