@@ -1,0 +1,7 @@
+(define foo true)
+
+(define afun
+  (lambda (c)
+    (if c false foo)))
+
+(afun nil)
