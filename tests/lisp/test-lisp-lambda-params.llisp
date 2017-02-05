@@ -1,0 +1,5 @@
+(define afun
+  (lambda (c v)
+    (if c false v)))
+
+(afun nil true)

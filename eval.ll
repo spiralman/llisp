@@ -51,6 +51,35 @@ continue:
        ret %object* %tailLookup
 }
 
+define %object* @resolveSymbol(%object* %symbol, %object** %env) {
+       %curEnvPtr = getelementptr %object** %env, i32 0
+       %curEnv = load %object** %curEnvPtr
+
+       %innerEnv = call %object* @first(%object* %curEnv)
+       %innerVal = call %object* @lookupSymbol(%object* %symbol, %object* %innerEnv)
+
+       %is_notInInner = call i1 @isNil(%object* %innerVal)
+       br i1 %is_notInInner, label %check_outer, label %ret_inner
+
+ret_inner:
+       ret %object* %innerVal
+
+check_outer:
+       %outerEnv = call %object* @rest(%object* %curEnv)
+       %is_outermost = call i1 @isNil(%object* %outerEnv)
+       br i1 %is_outermost, label %ret_nil, label %search_outer
+
+ret_nil:
+       ret %object* %outerEnv
+
+search_outer:
+       %outerEnvPtr = alloca %object*
+       store %object* %outerEnv, %object** %outerEnvPtr
+       %outerRes = call %object* @resolveSymbol(%object* %symbol, %object** %outerEnvPtr)
+
+       ret %object* %outerRes
+}
+
 define %object* @evalIf(%object* %forms, %object** %env) {
        %cond = call %object* @first(%object* %forms)
        %branches = call %object* @rest(%object* %forms)
@@ -95,9 +124,14 @@ define %object* @evalDefine(%object* %forms, %object** %env) {
        %expVal = call %object* @cons(%object* %expRes, %object* %nil)
        %expEntry = call %object* @cons(%object* %token, %object* %expVal)
 
-       %oldEnv = load %object** %env
+       %oldEnvWrapper = load %object** %env
+       %oldEnvOuter = call %object* @rest(%object* %oldEnvWrapper)
+
+       %oldEnv = call %object* @first(%object* %oldEnvWrapper)
        %newEnv = call %object* @cons(%object* %expEntry, %object* %oldEnv)
-       store %object* %newEnv, %object** %env
+       %newEnvWrapper = call %object* @cons(%object* %newEnv, %object* %oldEnvOuter)
+
+       store %object* %newEnvWrapper, %object** %env
 
        ret %object* %nil
 }
@@ -113,10 +147,35 @@ define %object* @evalBody(%object* %body, %object** %env) {
        ret %object* %nextRes
 }
 
-define %object* @evalCall(%object* %funSym, %object* %forms, %object** %env) {
-       %curEnvPtr = getelementptr %object** %env, i32 0
-       %curEnv = load %object** %curEnvPtr
-       %funDef = call %object* @lookupSymbol(%object* %funSym, %object* %curEnv)
+define %object* @bindParams(%object* %argList, %object* %params, %object* %curEnv, %object** %env) {
+       %nil = load %object** @val_nil
+
+       %is_end = call i1 @isNil(%object* %argList)
+       br i1 %is_end, label %ret_end, label %bind_params
+
+ret_end:
+       ret %object* %curEnv
+
+bind_params:
+       %nextArg = call %object* @first(%object* %argList)
+       %nextParam = call %object* @first(%object* %params)
+       %paramVal = call %object* @evalEnv(%object* %nextParam, %object** %env)
+       %paramEntry = call %object* @cons(%object* %paramVal, %object* %nil)
+       %binding = call %object* @cons(%object* %nextArg, %object* %paramEntry)
+
+       %newEnv = call %object* @cons(%object* %binding, %object* %curEnv)
+
+       %restArgs = call %object* @rest(%object* %argList)
+       %restParams = call %object* @rest(%object* %params)
+
+       %nextEnv = call %object* @bindParams(%object* %restArgs, %object* %restParams, %object* %newEnv, %object** %env)
+       ret %object* %nextEnv
+}
+
+define %object* @evalCall(%object* %funSym, %object* %params, %object** %env) {
+       %nil = load %object** @val_nil
+
+       %funDef = call %object* @resolveSymbol(%object* %funSym, %object** %env)
 
        %no_fun = call i1 @isNil(%object* %funDef)
        br i1 %no_fun, label %ret_nil, label %eval_fun
@@ -125,10 +184,17 @@ ret_nil:
        ret %object* %funDef
 
 eval_fun:
+       %fullEnvPtr = alloca %object*
        %argList = call %object* @first(%object* %funDef)
+       %funEnv = call %object* @bindParams(%object* %argList, %object* %params, %object* %nil, %object** %env)
+
+       %outerEnv = load %object** %env
+       %fullEnv = call %object* @cons(%object* %funEnv, %object* %outerEnv)
+       store %object* %fullEnv, %object** %fullEnvPtr
+
        %body = call %object* @rest(%object* %funDef)
 
-       %bodyRes = call %object* @evalBody(%object* %body, %object** %env)
+       %bodyRes = call %object* @evalBody(%object* %body, %object** %fullEnvPtr)
        ret %object* %bodyRes
 }
 
@@ -197,9 +263,7 @@ eval_list:
        ret %object* %listRes
 
 eval_token:
-       %curEnvPtr = getelementptr %object** %env, i32 0
-       %curEnv = load %object** %curEnvPtr
-       %symbolVal = call %object* @lookupSymbol(%object* %obj, %object* %curEnv)
+       %symbolVal = call %object* @resolveSymbol(%object* %obj, %object** %env)
 
        ret %object* %symbolVal
 
@@ -215,7 +279,6 @@ define %object* @eval(%object* %obj) {
 }
 
 define void @init_eval() {
-       %baseEnv = call %object* @cons(%object* null, %object* null)
        %nil = call %object* @cons(%object* null, %object* null)
        store %object* %nil, %object** @val_nil
 
@@ -223,7 +286,7 @@ define void @init_eval() {
        %falseToken = call %object* @newConstToken(i8* %falseStr)
        %falseVal = call %object* @cons(%object* %nil, %object* %nil)
        %falseEntry = call %object* @cons(%object* %falseToken, %object* %falseVal)
-       %falseEnv = call %object* @cons(%object* %falseEntry, %object* %baseEnv)
+       %falseEnv = call %object* @cons(%object* %falseEntry, %object* %nil)
 
        %nilStr = getelementptr [4 x i8]* @.sym_nil, i32 0, i32 0
        %nilToken = call %object* @newConstToken(i8* %nilStr)
@@ -237,8 +300,10 @@ define void @init_eval() {
        %trueEntry = call %object* @cons(%object* %trueToken, %object* %trueVal)
        %trueEnv = call %object* @cons(%object* %trueEntry, %object* %nilEnv)
 
+       %wrappedEnv = call %object* @cons(%object* %trueEnv, %object* %nil)
+
        %rootPtr = getelementptr %object** @root_env, i32 0
-       store %object* %trueEnv, %object** %rootPtr
+       store %object* %wrappedEnv, %object** %rootPtr
 
        ret void
 }
