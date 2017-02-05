@@ -3,13 +3,19 @@ declare i8* @malloc(i32) nounwind
 %object = type opaque
 
 declare %object* @newObject(i32, i8*)
+declare i32 @tag(%object*)
 declare i8* @unbox(%object*)
 
-define %object* @newTokenObject(i32 %size) {
+define %object* @newEmptyToken(i32 %size) {
        %tokenSpace = call i8* @malloc(i32 %size)
        store i8 0, i8* %tokenSpace
 
        %objectPtr = call %object* @newObject(i32 1, i8* %tokenSpace)
+       ret %object* %objectPtr
+}
+
+define %object* @newConstToken(i8* %val) {
+       %objectPtr = call %object* @newObject(i32 1, i8* %val)
        ret %object* %objectPtr
 }
 
@@ -77,5 +83,21 @@ equal:
        ret i1 true
 
 unequal:
+       ret i1 false
+}
+
+define i1 @tokenEq(%object* %lval, %object* %rval) {
+       %ltag = call i32 @tag(%object* %lval)
+       %rtag = call i32 @tag(%object* %rval)
+
+       %tagEq = icmp eq i32 %ltag, %rtag
+       br i1 %tagEq, label %match_tags, label %ret_false
+
+match_tags:
+       %rptr = call i8* @unbox(%object* %rval)
+       %valEq = call i1 @tokenMatches(%object* %lval, i8* %rptr)
+       ret i1 %valEq
+
+ret_false:
        ret i1 false
 }

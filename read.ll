@@ -14,7 +14,7 @@ declare i32 @feof(i8* nocapture) nounwind
 declare i32 @getc(i8* nocapture) nounwind
 declare i32 @ungetc(i32, i8* nocapture) nounwind
 
-declare %object* @newTokenObject(i32)
+declare %object* @newEmptyToken(i32)
 declare void @appendChar(%object*, i32)
 declare %object* @newObject(i32, i8*)
 declare %object* @cons(%object*, %object*)
@@ -71,7 +71,7 @@ leading_macro:
        ret %object* %leading_macro_res
 
 start_token:
-       %token = call %object* @newTokenObject(i32 64)
+       %token = call %object* @newEmptyToken(i32 64)
        call void @appendChar(%object* %token, i32 %firstChar)
 
        br label %read_token
