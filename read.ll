@@ -48,7 +48,13 @@ define %object* @read(i8* %input) {
 
 read_first:
        %firstChar = call i32 @getc(i8* %input)
-       br label %leading_space
+
+       %firstEOF = call i32 @feof(i8* %input)
+       %is_not_firstEOF = icmp eq i32 0, %firstEOF
+       br i1 %is_not_firstEOF, label %leading_space, label %leading_eof
+
+leading_eof:
+       ret %object* null
 
 leading_space:
        %is_leading_ws = icmp eq i32 %firstChar, %space
