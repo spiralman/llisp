@@ -6,13 +6,19 @@ declare i32 @putchar(i32) nounwind
 %object = type opaque
 
 declare void @init() nounwind
-declare %object* @mainFile(i32, i8**)
+declare %object* @evalFile(i8*)
 declare void @print(%object*)
 
 define i32 @main(i32 %argc, i8** %argv) {
+       %arg1Ptr = getelementptr i8** %argv, i64 1
+       %arg1Addr = load i8** %arg1Ptr
+
+       %cast_open_mode = getelementptr [2 x i8]* @.open_mode, i64 0, i64 0
+       %input = call i8* @fopen(i8* %arg1Addr, i8* %cast_open_mode)
+
        call void @init()
 
-       %result = call %object* @mainFile(i32 %argc, i8** %argv)
+       %result = call %object* @evalFile(i8* %input)
        call void @print(%object* %result)
        call i32 @putchar(i32 10)
 
