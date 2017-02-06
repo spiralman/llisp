@@ -1,0 +1,3 @@
+(define l (cons true (cons false (cons false nil))))
+
+(rest l)

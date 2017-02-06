@@ -5,11 +5,16 @@
 @.sym_false = private unnamed_addr constant [ 6 x i8 ] c"false\00"
 @.sym_nil = private unnamed_addr constant [ 4 x i8 ] c"nil\00"
 @.sym_true = private unnamed_addr constant [ 5 x i8 ] c"true\00"
+@.sym_cons = private unnamed_addr constant [ 5 x i8 ] c"cons\00"
+@.sym_first = private unnamed_addr constant [ 6 x i8 ] c"first\00"
+@.sym_rest = private unnamed_addr constant [ 5 x i8 ] c"rest\00"
 
 @root_env = linkonce global %object* zeroinitializer
 @val_nil = linkonce global %object* zeroinitializer
 
 %object = type opaque
+
+%nativeFn = type %object* (%object*)
 
 declare %object* @first(%object*)
 declare %object* @rest(%object*)
@@ -21,6 +26,7 @@ declare i1 @tokenMatches(%object*, i8*)
 declare i1 @tokenEq(%object*, %object*)
 declare %object* @newConstToken(i8*)
 
+declare %object* @newObject(i32, i8*)
 declare i32 @tag(%object*)
 declare i8* @unbox(%object*)
 
@@ -121,14 +127,12 @@ define %object* @evalDefine(%object* %forms, %object** %env) {
        %exp = call %object* @first(%object* %expList)
        %expRes = call %object* @evalEnv(%object* %exp, %object** %env)
 
-       %expVal = call %object* @cons(%object* %expRes, %object* %nil)
-       %expEntry = call %object* @cons(%object* %token, %object* %expVal)
-
        %oldEnvWrapper = load %object** %env
        %oldEnvOuter = call %object* @rest(%object* %oldEnvWrapper)
-
        %oldEnv = call %object* @first(%object* %oldEnvWrapper)
-       %newEnv = call %object* @cons(%object* %expEntry, %object* %oldEnv)
+
+       %newEnv = call %object* @consEnv(%object* %token, %object* %expRes, %object* %oldEnv)
+
        %newEnvWrapper = call %object* @cons(%object* %newEnv, %object* %oldEnvOuter)
 
        store %object* %newEnvWrapper, %object** %env
@@ -145,6 +149,24 @@ define %object* @evalBody(%object* %body, %object** %env) {
        %nextRes = call %object* @evalEnv(%object* %nextForm, %object** %env)
 
        ret %object* %nextRes
+}
+
+define %object* @evalParams(%object* %params, %object** %env) {
+       %is_end = call i1 @isNil(%object* %params)
+       br i1 %is_end, label %ret_end, label %eval_params
+
+ret_end:
+       ret %object* %params
+
+eval_params:
+       %nextParam = call %object* @first(%object* %params)
+       %paramVal = call %object* @evalEnv(%object* %nextParam, %object** %env)
+
+       %restParams = call %object* @rest(%object* %params)
+       %restVals = call %object* @evalParams(%object* %restParams, %object** %env)
+
+       %nextVals = call %object* @cons(%object* %paramVal, %object* %restVals)
+       ret %object* %nextVals
 }
 
 define %object* @bindParams(%object* %argList, %object* %params, %object* %curEnv, %object** %env) {
@@ -184,6 +206,20 @@ ret_nil:
        ret %object* %funDef
 
 eval_fun:
+       %fnTag = call i32 @tag(%object* %funDef)
+       %is_native = icmp eq i32 3, %fnTag
+       br i1 %is_native, label %eval_native, label %eval_lisp
+
+eval_native:
+       %fnPtr = call i8* @unbox(%object* %funDef)
+       %nativeFn = bitcast i8* %fnPtr to %nativeFn*
+
+       %evaledParams = call %object* @evalParams(%object* %params, %object** %env)
+       %nativeRes = call %object* %nativeFn(%object* %evaledParams)
+
+       ret %object* %nativeRes
+
+eval_lisp:
        %fullEnvPtr = alloca %object*
        %argList = call %object* @first(%object* %funDef)
        %funEnv = call %object* @bindParams(%object* %argList, %object* %params, %object* %nil, %object** %env)
@@ -278,29 +314,79 @@ define %object* @eval(%object* %obj) {
        ret %object* %res
 }
 
+define %object* @consEnv(%object* %token, %object* %val, %object* %oldEnv) {
+       %nil = load %object** @val_nil
+
+       %valList = call %object* @cons(%object* %val, %object* %nil)
+       %expEntry = call %object* @cons(%object* %token, %object* %valList)
+       %newEnv = call %object* @cons(%object* %expEntry, %object* %oldEnv)
+
+       ret %object* %newEnv
+}
+
+define %object* @updateEnv(i8* %sym, %object* %val, %object* %oldEnv) {
+       %symToken = call %object* @newConstToken(i8* %sym)
+
+       %newEnv = call %object* @consEnv(%object* %symToken, %object* %val, %object* %oldEnv)
+
+       ret %object* %newEnv
+}
+
+define %object* @updateEnvBuiltin(i8* %sym, %nativeFn* %fn, %object* %oldEnv) {
+       %fnPtr = bitcast %nativeFn* %fn to i8*
+       %wrappedFn = call %object* @newObject(i32 3, i8* %fnPtr)
+
+       %newEnv = call %object* @updateEnv(i8* %sym, %object* %wrappedFn, %object* %oldEnv)
+       ret %object* %newEnv
+}
+
+define %object* @wrapCons(%object* %args) {
+       %arg1 = call %object* @first(%object* %args)
+       %tail = call %object* @rest(%object* %args)
+       %arg2 = call %object* @first(%object* %tail)
+
+       %res = call %object* @cons(%object* %arg1, %object* %arg2)
+       ret %object* %res
+}
+
+define %object* @wrapFirst(%object* %args) {
+       %arg = call %object* @first(%object* %args)
+
+       %res = call %object* @first(%object* %arg)
+       ret %object* %res
+}
+
+define %object* @wrapRest(%object* %args) {
+       %arg = call %object* @first(%object* %args)
+
+       %res = call %object* @rest(%object* %arg)
+       ret %object* %res
+}
+
 define void @init_eval() {
        %nil = call %object* @cons(%object* null, %object* null)
        store %object* %nil, %object** @val_nil
 
        %falseStr = getelementptr [6 x i8]* @.sym_false, i32 0, i32 0
-       %falseToken = call %object* @newConstToken(i8* %falseStr)
-       %falseVal = call %object* @cons(%object* %nil, %object* %nil)
-       %falseEntry = call %object* @cons(%object* %falseToken, %object* %falseVal)
-       %falseEnv = call %object* @cons(%object* %falseEntry, %object* %nil)
+       %falseEnv = call %object* @updateEnv(i8* %falseStr, %object* %nil, %object* %nil)
 
        %nilStr = getelementptr [4 x i8]* @.sym_nil, i32 0, i32 0
-       %nilToken = call %object* @newConstToken(i8* %nilStr)
-       %nilVal = call %object* @cons(%object* %nilToken, %object* %nil)
-       %nilEntry = call %object* @cons(%object* %nil, %object* %nilVal)
-       %nilEnv = call %object* @cons(%object* %nilEntry, %object* %falseEnv)
+       %nilEnv = call %object* @updateEnv(i8* %nilStr, %object* %nil, %object* %falseEnv)
 
        %trueStr = getelementptr [5 x i8]* @.sym_true, i32 0, i32 0
        %trueToken = call %object* @newConstToken(i8* %trueStr)
-       %trueVal = call %object* @cons(%object* %trueToken, %object* %nil)
-       %trueEntry = call %object* @cons(%object* %trueToken, %object* %trueVal)
-       %trueEnv = call %object* @cons(%object* %trueEntry, %object* %nilEnv)
+       %trueEnv = call %object* @updateEnv(i8* %trueStr, %object* %trueToken, %object* %nilEnv)
 
-       %wrappedEnv = call %object* @cons(%object* %trueEnv, %object* %nil)
+       %consStr = getelementptr [5 x i8]* @.sym_cons, i32 0, i32 0
+       %consEnv = call %object* @updateEnvBuiltin(i8* %consStr, %nativeFn* @wrapCons, %object* %trueEnv)
+
+       %firstStr = getelementptr [6 x i8]* @.sym_first, i32 0, i32 0
+       %firstEnv = call %object* @updateEnvBuiltin(i8* %firstStr, %nativeFn* @wrapFirst, %object* %consEnv)
+
+       %restStr = getelementptr [5 x i8]* @.sym_rest, i32 0, i32 0
+       %restEnv = call %object* @updateEnvBuiltin(i8* %restStr, %nativeFn* @wrapRest, %object* %firstEnv)
+
+       %wrappedEnv = call %object* @cons(%object* %restEnv, %object* %nil)
 
        %rootPtr = getelementptr %object** @root_env, i32 0
        store %object* %wrappedEnv, %object** %rootPtr

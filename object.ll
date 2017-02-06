@@ -3,6 +3,7 @@ declare i8* @malloc(i32) nounwind
 ; Tag values:
 ; 0 - List
 ; 1 - Token
+; 2 - Native Function
 %object = type {
         i32,  ; Tag
         i8*   ; Value (may be bitcast, if it safely fits in a pointer)
