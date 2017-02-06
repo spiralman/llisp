@@ -38,4 +38,4 @@ test: $(TEST_HARNESSES)
 
 count:
 	@echo "Total non-comment, non-blank source lines:"
-	@./count.sh $(SOURCES)
+	@./count.sh $(SOURCES) $(MAIN_SOURCE)
