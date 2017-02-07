@@ -138,7 +138,9 @@ define %object* @evalDefine(%object* %forms, %object** %env) {
 }
 
 define %object* @evalLambda(%object* %forms, %object** %env) {
-       ret %object* %forms
+       %funEnv = load %object** %env
+       %fun = call %object* @cons(%object* %funEnv, %object* %forms)
+       ret %object* %fun
 }
 
 define %object* @evalBody(%object* %body, %object** %env) {
@@ -218,14 +220,15 @@ eval_native:
 
 eval_lisp:
        %fullEnvPtr = alloca %object*
-       %argList = call %object* @first(%object* %funDef)
+       %defEnv = call %object* @first(%object* %funDef)
+       %funForms = call %object* @rest(%object* %funDef)
+       %argList = call %object* @first(%object* %funForms)
        %funEnv = call %object* @bindParams(%object* %argList, %object* %params, %object* %nil, %object** %env)
 
-       %outerEnv = load %object** %env
-       %fullEnv = call %object* @cons(%object* %funEnv, %object* %outerEnv)
+       %fullEnv = call %object* @cons(%object* %funEnv, %object* %defEnv)
        store %object* %fullEnv, %object** %fullEnvPtr
 
-       %body = call %object* @rest(%object* %funDef)
+       %body = call %object* @rest(%object* %funForms)
 
        %bodyRes = call %object* @evalBody(%object* %body, %object** %fullEnvPtr)
        ret %object* %bodyRes

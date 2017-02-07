@@ -1,0 +1,9 @@
+(define consx
+  (lambda (x)
+    (lambda (y)
+      (cons x y))))
+
+(define construe
+  (consx true))
+
+(construe true)
