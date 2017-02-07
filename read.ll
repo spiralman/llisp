@@ -8,6 +8,8 @@
 %list = type opaque
 %object = type opaque
 
+@val_nil = external global %object*
+
 declare i8* @malloc(i32) nounwind
 
 declare i32 @feof(i8* nocapture) nounwind
@@ -24,7 +26,7 @@ define %object* @read_list(i8* %input, i32 %char) {
        %is_end = icmp eq %object* %nextHead, null
        br i1 %is_end, label %at_end, label %read_tail
 at_end:
-       %nil = call %object* @cons(%object* null, %object* null)
+       %nil = load %object** @val_nil
        ret %object* %nil
 
 read_tail:

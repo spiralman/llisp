@@ -2,6 +2,8 @@ declare i8* @malloc(i32) nounwind
 
 %object = type opaque
 
+@val_nil = external global %object*
+
 declare %object* @newObject(i32, i8*)
 declare i32 @tag(%object*)
 declare i8* @unbox(%object*)
@@ -35,6 +37,15 @@ check_nil:
 ; Cons null with null to create an empty list/nil.
 ; Cons Obj with nil to create a list of 1 element.
 define %object* @cons(%object* %head, %object* %tail) {
+       %is_null = icmp eq %object* null, %tail
+       br i1 %is_null, label %cons_list, label %check_list
+
+check_list:
+       %tailTag = call i32 @tag(%object* %tail)
+       %is_list = icmp eq i32 0, %tailTag
+       br i1 %is_list, label %cons_list, label %cons_nil
+
+cons_list:
        %listSize = getelementptr %list* null, i32 1
        %listSizeI = ptrtoint %list* %listSize to i32
 
@@ -49,6 +60,12 @@ define %object* @cons(%object* %head, %object* %tail) {
 
        %objectPtr = call %object* @newObject(i32 0, i8* %listSpace)
        ret %object* %objectPtr
+
+cons_nil:
+       %nil = load %object** @val_nil
+       %tailList = call %object* @cons(%object* %tail, %object* %nil)
+       %fullList = call %object* @cons(%object* %head, %object* %tailList)
+       ret %object* %fullList
 }
 
 define %object* @first(%object* %obj) {

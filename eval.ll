@@ -30,9 +30,6 @@ declare %object* @newObject(i32, i8*)
 declare i32 @tag(%object*)
 declare i8* @unbox(%object*)
 
-declare i32 @putchar(i32) nounwind
-declare void @print(%object*)
-
 define %object* @lookupSymbol(%object* %symbol, %object* %env) {
        %is_end = call i1 @isNil(%object* %env)
        br i1 %is_end, label %ret_nil, label %check_head
