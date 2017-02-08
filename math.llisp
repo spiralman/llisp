@@ -1,0 +1,43 @@
+(define and
+  (lambda (x y)
+    (if x (if y true false)
+      false)))
+
+(define or
+  (lambda (x y)
+    (if x true
+      (if y true false))))
+
+(define xor
+  (lambda (x y)
+    (if x (if y false true)
+      (if y true false))))
+
+(define not
+  (lambda (x)
+    (if x false true)))
+
+(define add
+  (lambda (x y cin)
+    (xor (xor x y) cin)))
+
+(define carry
+  (lambda (x y cin)
+    (or (and x y) (and cin (xor x y)))))
+
+(define +
+  (lambda (x y)
+    ((lambda (x1 y1 xr yr)
+       (if (not xr)
+           (cons (carry x1 y1 false)
+                 (cons (add x1 y1 false) nil))
+         ((lambda (sr)
+            ((lambda (cin)
+               (cons (carry x1 y1 cin)
+                     (cons (add x1 y1 cin)
+                           (rest sr))))
+             (first sr)))
+          (+ xr yr))))
+     (first x) (first y) (rest x) (rest y))))
+
+(+ (cons false (cons true true)) (cons true (cons true true)))
