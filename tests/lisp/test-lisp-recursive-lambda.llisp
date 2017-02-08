@@ -1,0 +1,7 @@
+(define f
+  (lambda (x)
+    (if x
+        true
+      (f true))))
+
+(f false)
