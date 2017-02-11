@@ -34,8 +34,8 @@ proto-lisp?), the goal of which is to explore an extremely simple
 implementation of a lisp in an implementation language (LLVM IR) which
 makes any "hidden" complexities painfully obvious.
 
-As such, there isn't much to it, but you can perform computations with
-it.
+As such, there isn't much to it, but you can perform
+[computations](math.llisp) with it.
 
 ### `false` | `nil` | `()` ###
 
