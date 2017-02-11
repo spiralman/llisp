@@ -10,10 +10,11 @@ TEST_HARNESS_SOURCES = test-reader-main.ll test-eval-main.ll test-lisp-main.ll
 TEST_HARNESS_BITCODE = $(TEST_HARNESS_SOURCES:.ll=.bc)
 TEST_HARNESSES = $(TEST_HARNESS_BITCODE:%-main.bc=%.bc)
 
-.PHONY: clean test
+.PHONY: clean test all default
 
-all: test-reader.bc test-eval.bc test-lisp.bc $(MAIN)
-	@echo $(MAIN_SOURCE) $(MAIN_BITCODE) $(MAIN_LINKED) $(MAIN)
+default: $(MAIN)
+
+all: $(MAIN) test
 
 %.bc: %.ll
 	llvm-as -o $@ $<
