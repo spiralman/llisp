@@ -55,8 +55,6 @@ file:
        %fileInput = call i8* @fopen(i8* %arg1Addr, i8* %cast_open_mode)
 
        %result = call %object* @evalFile(i8* %fileInput)
-       call void @print(%object* %result)
-       call i32 @putchar(i32 10)
 
        ret i32 0
 }

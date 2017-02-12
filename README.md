@@ -23,9 +23,7 @@ project (excluding tests).
 # Using #
 
 After building it, run `./llisp` to get an interactive REPL, or
-`./llisp somefile.llisp` to execute the code in a file. When executing
-a file, the result of the last form in the file will be printed to
-standard out.
+`./llisp somefile.llisp` to execute the code in a file.
 
 ## The language ##
 
@@ -159,5 +157,22 @@ Example:
 llisp> (rest (cons true true))
 (true)
 llisp> (rest (cons true nil))
+nil
+```
+
+### `print` ###
+
+`print` prints its argument to standard out, followed by a newline,
+and returns nil.
+
+```lisp
+(print someval)
+```
+
+Example:
+
+```
+llisp> (print (cons true true))
+(true true)
 nil
 ```

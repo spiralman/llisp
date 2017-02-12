@@ -40,4 +40,4 @@
           (+ xr yr))))
      (first x) (first y) (rest x) (rest y))))
 
-(+ (cons false (cons true true)) (cons true (cons true true)))
+(print (+ (cons false (cons true true)) (cons true (cons true true))))
