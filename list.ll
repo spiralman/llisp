@@ -23,7 +23,11 @@ not_nil:
        ret i1 false
 
 check_nil:
-       %head = call %object* @first(%object* %obj)
+       %val = call i8* @unbox(%object* %obj)
+
+       %cellPtr = bitcast i8* %val to %list*
+       %headPtr = getelementptr %list* %cellPtr, i32 0, i32 0
+       %head = load %object** %headPtr
        %is_nil = icmp eq %object* %head, null
 
        ret i1 %is_nil
@@ -69,6 +73,13 @@ cons_nil:
 }
 
 define %object* @first(%object* %obj) {
+       %is_nil = call i1 @isNil(%object* %obj)
+       br i1 %is_nil, label %ret_nil, label %ret_head
+
+ret_nil:
+       ret %object* %obj
+
+ret_head:
        %val = call i8* @unbox(%object* %obj)
 
        %cellPtr = bitcast i8* %val to %list*
@@ -80,6 +91,13 @@ define %object* @first(%object* %obj) {
 }
 
 define %object* @rest(%object* %obj) {
+       %is_nil = call i1 @isNil(%object* %obj)
+       br i1 %is_nil, label %ret_nil, label %ret_rest
+
+ret_nil:
+       ret %object* %obj
+
+ret_rest:
        %val = call i8* @unbox(%object* %obj)
 
        %cellPtr = bitcast i8* %val to %list*

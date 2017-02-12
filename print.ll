@@ -23,11 +23,11 @@ declare i8* @unbox(%object*)
 ;                                              null
 
 define void @printListElems(%object* %obj) {
-       %head = call %object* @first(%object* %obj)
-       %is_end = icmp eq %object* %head, null
+       %is_end = call i1 @isNil(%object *%obj)
        br i1 %is_end, label %finalize, label %print_next
 
 print_next:
+       %head = call %object* @first(%object* %obj)
        call i32 @putchar(i32 32)
        call void @print(%object* %head)
 
@@ -91,8 +91,8 @@ done:
 }
 
 define void @print(%object* %obj) {
-       %is_nil = icmp eq %object* %obj, null
-       br i1 %is_nil, label %finalize, label %decode_obj
+       %is_null = icmp eq %object* %obj, null
+       br i1 %is_null, label %finalize, label %decode_obj
 
 decode_obj:
        %tag = call i32 @tag(%object* %obj)
