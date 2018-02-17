@@ -45,7 +45,7 @@ define void @printList(%object* %obj) {
        br i1 %is_nil, label %print_nil, label %print_list
 
 print_nil:
-       %nil_repr = getelementptr [4 x i8]* @.nil_repr, i32 0, i32 0
+       %nil_repr = getelementptr [4 x i8], [4 x i8]* @.nil_repr, i32 0, i32 0
        call void @printToken(i8* %nil_repr)
        br label %finalize
 
@@ -70,10 +70,10 @@ define void @printToken(i8* %str) {
        br label %put_next
 
 put_next:
-       %tokenPos = load i32* %tokenPosPtr
-       %tokenTail = getelementptr i8* %str, i32 %tokenPos
+       %tokenPos = load i32, i32* %tokenPosPtr
+       %tokenTail = getelementptr i8, i8* %str, i32 %tokenPos
 
-       %tokenVal = load i8* %tokenTail
+       %tokenVal = load i8, i8* %tokenTail
 
        %is_null = icmp eq i8 0, %tokenVal
        br i1 %is_null, label %done, label %print

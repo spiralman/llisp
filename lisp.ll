@@ -36,6 +36,6 @@ eval_token:
        br label %read_eval
 
 ret_result:
-       %finalResult = load %object** %resultPtr
+       %finalResult = load %object*, %object** %resultPtr
        ret %object* %finalResult
 }

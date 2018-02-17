@@ -26,7 +26,7 @@ define %object* @read_list(i8* %input, i32 %char) {
        %is_end = icmp eq %object* %nextHead, null
        br i1 %is_end, label %at_end, label %read_tail
 at_end:
-       %nil = load %object** @val_nil
+       %nil = load %object*, %object** @val_nil
        ret %object* %nil
 
 read_tail:
@@ -41,10 +41,10 @@ define %object* @end_list(i8* %input, i32 %char) {
 }
 
 define %object* @read(i8* %input) {
-       %space = load i32* @.space
-       %newline = load i32* @.newline
-       %macro = load i32* @.macro
-       %term = load i32* @.term
+       %space = load i32, i32* @.space
+       %newline = load i32, i32* @.newline
+       %macro = load i32, i32* @.macro
+       %term = load i32, i32* @.term
 
        br label %read_first
 
@@ -67,9 +67,9 @@ leading_newline:
        br i1 %is_leading_nl, label %read_first, label %leading_macro_check
 
 leading_macro_check:
-       %leadingMacroFnPtrPtr = getelementptr [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 %firstChar
+       %leadingMacroFnPtrPtr = getelementptr [ 256 x %object* (i8*, i32)* ], [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 %firstChar
        %leadingMacroFnValPtr = bitcast %object* (i8*, i32)** %leadingMacroFnPtrPtr to i8**
-       %leadingMacroFnVal = load i8** %leadingMacroFnValPtr
+       %leadingMacroFnVal = load i8*, i8** %leadingMacroFnValPtr
        %is_not_leading_macro = icmp eq i8* null, %leadingMacroFnVal
        br i1 %is_not_leading_macro, label %start_token, label %leading_macro
 
@@ -99,9 +99,9 @@ inner_newline:
        br i1 %is_inner_nl, label %finalize_token, label %inner_macro_check
 
 inner_macro_check:
-       %innerMacroFnPtrPtr = getelementptr [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 %nextChar
+       %innerMacroFnPtrPtr = getelementptr [ 256 x %object* (i8*, i32)* ], [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 %nextChar
        %innerMacroFnValPtr = bitcast %object* (i8*, i32)** %innerMacroFnPtrPtr to i8**
-       %innerMacroFnVal = load i8** %innerMacroFnValPtr
+       %innerMacroFnVal = load i8*, i8** %innerMacroFnValPtr
        %is_not_inner_macro = icmp eq i8* null, %innerMacroFnVal
        br i1 %is_not_inner_macro, label %append_token, label %inner_macro
 
@@ -119,10 +119,10 @@ finalize_token:
 
 define void @init_reader() {
        ;; This could be done statically, but this is less typing
-       %startListPtr = getelementptr [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 40
+       %startListPtr = getelementptr [ 256 x %object* (i8*, i32)* ], [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 40
        store %object* (i8*, i32)* @read_list, %object* (i8*, i32)** %startListPtr
 
-       %endListPtr = getelementptr [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 41
+       %endListPtr = getelementptr [ 256 x %object* (i8*, i32)* ], [ 256 x %object* (i8*, i32)* ]* @macro_table, i32 0, i32 41
        store %object* (i8*, i32)* @end_list, %object* (i8*, i32)** %endListPtr
 
        ret void

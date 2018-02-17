@@ -29,11 +29,11 @@ define void @appendChar(%object* %obj, i32 %val) {
        br label %read_next
 
 read_next:
-       %stringPos = load i32* %stringPosPtr
+       %stringPos = load i32, i32* %stringPosPtr
        %stringPosInc = add i32 1, %stringPos
-       %stringTail = getelementptr i8* %stringSpace, i32 %stringPos
+       %stringTail = getelementptr i8, i8* %stringSpace, i32 %stringPos
 
-       %stringVal = load i8* %stringTail
+       %stringVal = load i8, i8* %stringTail
 
        %is_null = icmp eq i8 0, %stringVal
        br i1 %is_null, label %append_char, label %increment
@@ -44,7 +44,7 @@ increment:
 
 append_char:
        store i8 %char, i8* %stringTail
-       %stringTailInc = getelementptr i8* %stringSpace, i32 %stringPosInc
+       %stringTailInc = getelementptr i8, i8* %stringSpace, i32 %stringPosInc
        store i8 0, i8* %stringTailInc
 
        ret void
@@ -59,12 +59,12 @@ define i1 @tokenMatches(%object* %token, i8* %match) {
        br label %check_next
 
 check_next:
-       %tokenPos = load i32* %tokenPosPtr
-       %tokenTail = getelementptr i8* %str, i32 %tokenPos
-       %matchTail = getelementptr i8* %match, i32 %tokenPos
+       %tokenPos = load i32, i32* %tokenPosPtr
+       %tokenTail = getelementptr i8, i8* %str, i32 %tokenPos
+       %matchTail = getelementptr i8, i8* %match, i32 %tokenPos
 
-       %tokenVal = load i8* %tokenTail
-       %matchVal = load i8* %matchTail
+       %tokenVal = load i8, i8* %tokenTail
+       %matchVal = load i8, i8* %matchTail
 
        %is_eq = icmp eq i8 %matchVal, %tokenVal
        br i1 %is_eq, label %check_null, label %unequal

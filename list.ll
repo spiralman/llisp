@@ -26,8 +26,8 @@ check_nil:
        %val = call i8* @unbox(%object* %obj)
 
        %cellPtr = bitcast i8* %val to %list*
-       %headPtr = getelementptr %list* %cellPtr, i32 0, i32 0
-       %head = load %object** %headPtr
+       %headPtr = getelementptr %list, %list* %cellPtr, i32 0, i32 0
+       %head = load %object*, %object** %headPtr
        %is_nil = icmp eq %object* %head, null
 
        ret i1 %is_nil
@@ -50,23 +50,23 @@ check_list:
        br i1 %is_list, label %cons_list, label %cons_nil
 
 cons_list:
-       %listSize = getelementptr %list* null, i32 1
+       %listSize = getelementptr %list, %list* null, i32 1
        %listSizeI = ptrtoint %list* %listSize to i32
 
        %listSpace = call i8* @malloc(i32 %listSizeI)
        %listPtr = bitcast i8* %listSpace to %list*
 
-       %valPtr = getelementptr %list* %listPtr, i32 0, i32 0
+       %valPtr = getelementptr %list, %list* %listPtr, i32 0, i32 0
        store %object* %head, %object** %valPtr
 
-       %nextPtr = getelementptr %list* %listPtr, i32 0, i32 1
+       %nextPtr = getelementptr %list, %list* %listPtr, i32 0, i32 1
        store %object* %tail, %object** %nextPtr
 
        %objectPtr = call %object* @newObject(i32 0, i8* %listSpace)
        ret %object* %objectPtr
 
 cons_nil:
-       %nil = load %object** @val_nil
+       %nil = load %object*, %object** @val_nil
        %tailList = call %object* @cons(%object* %tail, %object* %nil)
        %fullList = call %object* @cons(%object* %head, %object* %tailList)
        ret %object* %fullList
@@ -84,8 +84,8 @@ ret_head:
 
        %cellPtr = bitcast i8* %val to %list*
 
-       %headPtr = getelementptr %list* %cellPtr, i32 0, i32 0
-       %head = load %object** %headPtr
+       %headPtr = getelementptr %list, %list* %cellPtr, i32 0, i32 0
+       %head = load %object*, %object** %headPtr
 
        ret %object* %head
 }
@@ -102,8 +102,8 @@ ret_rest:
 
        %cellPtr = bitcast i8* %val to %list*
 
-       %tailPtr = getelementptr %list* %cellPtr, i32 0, i32 1
-       %tail = load %object** %tailPtr
+       %tailPtr = getelementptr %list, %list* %cellPtr, i32 0, i32 1
+       %tail = load %object*, %object** %tailPtr
 
        ret %object* %tail
 }

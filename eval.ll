@@ -78,7 +78,7 @@ check_outer:
        br i1 %is_outermost, label %search_global, label %search_outer
 
 search_global:
-       %globalEnvWrapper = load %object** @root_env
+       %globalEnvWrapper = load %object*, %object** @root_env
        %globalEnv = call %object* @first(%object* %globalEnvWrapper)
        %globalRes = call %object* @lookupSymbol(%object* %symbol, %object* %globalEnv)
 
@@ -124,14 +124,14 @@ eval_else:
 }
 
 define %object* @evalDefine(%object* %forms, %object* %env) {
-       %nil = load %object** @val_nil
+       %nil = load %object*, %object** @val_nil
        %token = call %object* @first(%object* %forms)
 
        %expList = call %object* @rest(%object* %forms)
        %exp = call %object* @first(%object* %expList)
        %expRes = call %object* @evalEnv(%object* %exp, %object* %env)
 
-       %oldEnvWrapper = load %object** @root_env
+       %oldEnvWrapper = load %object*, %object** @root_env
        %oldEnvOuter = call %object* @rest(%object* %oldEnvWrapper)
        %oldEnv = call %object* @first(%object* %oldEnvWrapper)
 
@@ -175,7 +175,7 @@ eval_params:
 }
 
 define %object* @bindParams(%object* %argList, %object* %params, %object* %curEnv, %object* %env) {
-       %nil = load %object** @val_nil
+       %nil = load %object*, %object** @val_nil
 
        %is_end = call i1 @isNil(%object* %argList)
        br i1 %is_end, label %ret_end, label %bind_params
@@ -200,7 +200,7 @@ bind_params:
 }
 
 define %object* @evalCall(%object* %funSym, %object* %params, %object* %env) {
-       %nil = load %object** @val_nil
+       %nil = load %object*, %object** @val_nil
 
        %funDef = call %object* @evalEnv(%object* %funSym, %object* %env)
 
@@ -249,7 +249,7 @@ eval_forms:
        %head = call %object* @first(%object* %forms)
        %tail = call %object* @rest(%object* %forms)
 
-       %match_if = getelementptr [3 x i8]* @.form_if, i32 0, i32 0
+       %match_if = getelementptr [3 x i8], [3 x i8]* @.form_if, i32 0, i32 0
        %is_if = call i1 @tokenMatches(%object* %head, i8* %match_if)
 
        br i1 %is_if, label %eval_if, label %check_define
@@ -259,7 +259,7 @@ eval_if:
        ret %object* %if_res
 
 check_define:
-       %match_define = getelementptr [7 x i8]* @.form_define, i32 0, i32 0
+       %match_define = getelementptr [7 x i8], [7 x i8]* @.form_define, i32 0, i32 0
        %is_define = call i1 @tokenMatches(%object* %head, i8* %match_define)
 
        br i1 %is_define, label %eval_define, label %check_lambda
@@ -269,7 +269,7 @@ eval_define:
        ret %object* %define_res
 
 check_lambda:
-       %match_lambda = getelementptr [7 x i8]* @.form_lambda, i32 0, i32 0
+       %match_lambda = getelementptr [7 x i8], [7 x i8]* @.form_lambda, i32 0, i32 0
        %is_lambda = call i1 @tokenMatches(%object* %head, i8* %match_lambda)
 
        br i1 %is_lambda, label %eval_lambda, label %eval_call
@@ -312,14 +312,14 @@ finalize:
 }
 
 define %object* @eval(%object* %obj) {
-       %nil = load %object** @val_nil
+       %nil = load %object*, %object** @val_nil
 
        %res = call %object* @evalEnv(%object* %obj, %object* %nil)
        ret %object* %res
 }
 
 define %object* @consEnv(%object* %token, %object* %val, %object* %oldEnv) {
-       %nil = load %object** @val_nil
+       %nil = load %object*, %object** @val_nil
 
        %valList = call %object* @cons(%object* %val, %object* %nil)
        %expEntry = call %object* @cons(%object* %token, %object* %valList)
@@ -373,7 +373,7 @@ define %object* @wrapPrint(%object* %args) {
        call void @print(%object* %arg)
        call i32 @putchar(i32 10)
 
-       %nil = load %object** @val_nil
+       %nil = load %object*, %object** @val_nil
        ret %object* %nil
 }
 
@@ -381,31 +381,31 @@ define void @init_eval() {
        %nil = call %object* @cons(%object* null, %object* null)
        store %object* %nil, %object** @val_nil
 
-       %falseStr = getelementptr [6 x i8]* @.sym_false, i32 0, i32 0
+       %falseStr = getelementptr [6 x i8], [6 x i8]* @.sym_false, i32 0, i32 0
        %falseEnv = call %object* @updateEnv(i8* %falseStr, %object* %nil, %object* %nil)
 
-       %nilStr = getelementptr [4 x i8]* @.sym_nil, i32 0, i32 0
+       %nilStr = getelementptr [4 x i8], [4 x i8]* @.sym_nil, i32 0, i32 0
        %nilEnv = call %object* @updateEnv(i8* %nilStr, %object* %nil, %object* %falseEnv)
 
-       %trueStr = getelementptr [5 x i8]* @.sym_true, i32 0, i32 0
+       %trueStr = getelementptr [5 x i8], [5 x i8]* @.sym_true, i32 0, i32 0
        %trueToken = call %object* @newConstToken(i8* %trueStr)
        %trueEnv = call %object* @updateEnv(i8* %trueStr, %object* %trueToken, %object* %nilEnv)
 
-       %consStr = getelementptr [5 x i8]* @.sym_cons, i32 0, i32 0
+       %consStr = getelementptr [5 x i8], [5 x i8]* @.sym_cons, i32 0, i32 0
        %consEnv = call %object* @updateEnvBuiltin(i8* %consStr, %nativeFn* @wrapCons, %object* %trueEnv)
 
-       %firstStr = getelementptr [6 x i8]* @.sym_first, i32 0, i32 0
+       %firstStr = getelementptr [6 x i8], [6 x i8]* @.sym_first, i32 0, i32 0
        %firstEnv = call %object* @updateEnvBuiltin(i8* %firstStr, %nativeFn* @wrapFirst, %object* %consEnv)
 
-       %restStr = getelementptr [5 x i8]* @.sym_rest, i32 0, i32 0
+       %restStr = getelementptr [5 x i8], [5 x i8]* @.sym_rest, i32 0, i32 0
        %restEnv = call %object* @updateEnvBuiltin(i8* %restStr, %nativeFn* @wrapRest, %object* %firstEnv)
 
-       %printStr = getelementptr [6 x i8]* @.sym_print, i32 0, i32 0
+       %printStr = getelementptr [6 x i8], [6 x i8]* @.sym_print, i32 0, i32 0
        %printEnv = call %object* @updateEnvBuiltin(i8* %printStr, %nativeFn* @wrapPrint, %object* %restEnv)
 
        %wrappedEnv = call %object* @cons(%object* %printEnv, %object* %nil)
 
-       %rootPtr = getelementptr %object** @root_env, i32 0
+       %rootPtr = getelementptr %object*, %object** @root_env, i32 0
        store %object* %wrappedEnv, %object** %rootPtr
 
        ret void
