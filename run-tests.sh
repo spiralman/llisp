@@ -1,5 +1,7 @@
 #!/bin/bash
 
+TARGET_TRIPLE=$(lli -version | grep 'Default target' | sed 's/.*: \(.*\)/\1/')
+
 TESTS=0
 FAILURES=0
 
@@ -9,7 +11,7 @@ test_subsystem() {
     SUBSYSTEM=$1
     for TEST_FILE in `ls tests/${SUBSYSTEM}/test-*.llisp`; do
         TESTS=$(($TESTS + 1))
-	      DIFF=$(lli test-${SUBSYSTEM}.bc $TEST_FILE | diff -u $TEST_FILE.out -)
+	      DIFF=$(lli -mtriple="$TARGET_TRIPLE" test-${SUBSYSTEM}.bc $TEST_FILE | diff -u $TEST_FILE.out -)
         if [ $? == 0 ]
         then
             echo -n "."
