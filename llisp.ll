@@ -16,7 +16,7 @@ declare %object* @eval(%object*)
 declare void @print(%object*)
 
 define i32 @repl(i8* %input) {
-       %prompt = getelementptr [8 x i8]* @.prompt, i64 0, i64 0
+       %prompt = getelementptr [8 x i8], [8 x i8]* @.prompt, i64 0, i64 0
 
        call void @printToken(i8* %prompt)
        %token = call %object* @read(i8* %input)
@@ -37,7 +37,7 @@ eval_token:
 }
 
 define i32 @main(i32 %argc, i8** %argv) {
-       %cast_open_mode = getelementptr [2 x i8]* @.open_mode, i64 0, i64 0
+       %cast_open_mode = getelementptr [2 x i8], [2 x i8]* @.open_mode, i64 0, i64 0
        call void @init()
 
        %is_repl = icmp eq i32 1, %argc
@@ -49,8 +49,8 @@ repl:
        ret i32 %repl_res
 
 file:
-       %arg1Ptr = getelementptr i8** %argv, i64 1
-       %arg1Addr = load i8** %arg1Ptr
+       %arg1Ptr = getelementptr i8*, i8** %argv, i64 1
+       %arg1Addr = load i8*, i8** %arg1Ptr
 
        %fileInput = call i8* @fopen(i8* %arg1Addr, i8* %cast_open_mode)
 
