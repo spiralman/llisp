@@ -2,8 +2,8 @@ SOURCES = list.ll lisp.ll eval.ll print.ll read.ll object.ll token.ll
 MAIN_SOURCE = llisp.ll
 MAIN_BITCODE = $(MAIN_SOURCE:.ll=.bc)
 MAIN_LINKED = $(MAIN_BITCODE:%.bc=%.out.bc)
-MAIN_COMPILED = $(MAIN_LINKED:%.out.bc=%.s)
-MAIN = $(MAIN_COMPILED:%.s=%)
+MAIN_COMPILED = $(MAIN_LINKED:%.out.bc=%.o)
+MAIN = $(MAIN_COMPILED:%.o=%)
 BITCODE = $(SOURCES:.ll=.bc)
 
 TEST_HARNESS_SOURCES = test-reader-main.ll test-eval-main.ll test-lisp-main.ll
@@ -26,10 +26,10 @@ $(MAIN_LINKED): %.bc: $(BITCODE) $(MAIN_BITCODE)
 	llvm-link $^ -o $@
 
 $(MAIN_COMPILED): $(MAIN_LINKED)
-	llc $^ -o $@
+	llc $^ -filetype=obj -o $@
 
 $(MAIN): $(MAIN_COMPILED)
-	gcc $^ -o $@
+	gcc $^ -lc -o $@
 
 clean:
 	rm -f $(BITCODE) $(TEST_HARNESSES) $(TEST_HARNESS_BITCODE) $(MAIN_BITCODE) $(MAIN_LINKED) $(MAIN_COMPILED) $(MAIN)
