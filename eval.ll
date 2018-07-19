@@ -1,6 +1,7 @@
 @.form_if = private unnamed_addr constant [ 3 x i8 ] c"if\00"
 @.form_define = private unnamed_addr constant [ 7 x i8 ] c"define\00"
 @.form_lambda = private unnamed_addr constant [ 7 x i8 ] c"lambda\00"
+@.form_quote = private unnamed_addr constant [ 6 x i8 ] c"quote\00"
 
 @.sym_false = private unnamed_addr constant [ 6 x i8 ] c"false\00"
 @.sym_nil = private unnamed_addr constant [ 4 x i8 ] c"nil\00"
@@ -149,6 +150,11 @@ define %object* @evalLambda(%object* %forms, %object* %env) {
        ret %object* %fun
 }
 
+define %object* @evalQuote(%object* %forms, %object* %env) {
+       %quoted = call %object* @first(%object* %forms)
+       ret %object* %quoted
+}
+
 define %object* @evalBody(%object* %body, %object* %env) {
        %nextForm = call %object* @first(%object* %body)
        %nextRes = call %object* @evalEnv(%object* %nextForm, %object* %env)
@@ -272,11 +278,21 @@ check_lambda:
        %match_lambda = getelementptr [7 x i8], [7 x i8]* @.form_lambda, i32 0, i32 0
        %is_lambda = call i1 @tokenMatches(%object* %head, i8* %match_lambda)
 
-       br i1 %is_lambda, label %eval_lambda, label %eval_call
+       br i1 %is_lambda, label %eval_lambda, label %check_quote
 
 eval_lambda:
        %lambda_res = call %object* @evalLambda(%object* %tail, %object* %env)
        ret %object* %lambda_res
+
+check_quote:
+       %match_quote = getelementptr [6 x i8], [6 x i8]* @.form_quote, i32 0, i32 0
+       %is_quote = call i1 @tokenMatches(%object* %head, i8* %match_quote)
+
+       br i1 %is_quote, label %eval_quote, label %eval_call
+
+eval_quote:
+       %quote_res = call %object* @evalQuote(%object* %tail, %object* %env)
+       ret %object* %quote_res
 
 eval_call:
        %call_res = call %object* @evalCall(%object* %head, %object* %tail, %object* %env)
