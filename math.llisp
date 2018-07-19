@@ -40,4 +40,8 @@
           (+ xr yr))))
      (first x) (first y) (rest x) (rest y))))
 
-(print (+ (cons false (cons true true)) (cons true (cons true true))))
+(define 3 (quote (() true true)))
+
+(define 7 (quote (true true true)))
+
+(print (+ 3 7))
