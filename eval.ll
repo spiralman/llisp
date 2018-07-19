@@ -10,6 +10,7 @@
 @.sym_first = private unnamed_addr constant [ 6 x i8 ] c"first\00"
 @.sym_rest = private unnamed_addr constant [ 5 x i8 ] c"rest\00"
 @.sym_print = private unnamed_addr constant [ 6 x i8 ] c"print\00"
+@.sym_eval = private unnamed_addr constant [ 5 x i8 ] c"eval\00"
 
 @root_env = linkonce global %object* zeroinitializer
 @val_nil = linkonce global %object* zeroinitializer
@@ -393,6 +394,13 @@ define %object* @wrapPrint(%object* %args) {
        ret %object* %nil
 }
 
+define %object* @wrapEval(%object* %args) {
+       %arg = call %object* @first(%object* %args)
+
+       %res = call %object* @eval(%object* %arg)
+       ret %object* %res
+}
+
 define void @init_eval() {
        %nil = call %object* @cons(%object* null, %object* null)
        store %object* %nil, %object** @val_nil
@@ -419,7 +427,10 @@ define void @init_eval() {
        %printStr = getelementptr [6 x i8], [6 x i8]* @.sym_print, i32 0, i32 0
        %printEnv = call %object* @updateEnvBuiltin(i8* %printStr, %nativeFn* @wrapPrint, %object* %restEnv)
 
-       %wrappedEnv = call %object* @cons(%object* %printEnv, %object* %nil)
+       %evalStr = getelementptr [5 x i8], [5 x i8]* @.sym_eval, i32 0, i32 0
+       %evalEnv = call %object* @updateEnvBuiltin(i8* %evalStr, %nativeFn* @wrapEval, %object* %printEnv)
+
+       %wrappedEnv = call %object* @cons(%object* %evalEnv, %object* %nil)
 
        %rootPtr = getelementptr %object*, %object** @root_env, i32 0
        store %object* %wrappedEnv, %object** %rootPtr
