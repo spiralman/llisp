@@ -105,6 +105,31 @@ llisp> (not false)
 true
 ```
 
+### `quote` ###
+
+`quote` is a special form which returns its body without it being
+evaluated.
+
+```lisp
+(quote body)
+```
+
+Example:
+
+```
+llisp> (quote foo)
+foo
+```
+
+You can save a lot of typing with `quote`:
+
+```
+llisp> (cons true (cons true (cons true true)))
+(true true true true)
+llisp> (quote (true true true true))
+(true true true true)
+```
+
 ### `cons` ###
 
 `cons` returns a new list in which the first argument is the first
@@ -175,4 +200,23 @@ Example:
 llisp> (print (cons true true))
 (true true)
 nil
+```
+
+### `eval` ###
+
+You can evaluate data as code using `eval`. The code is evaluated in
+the current execution context, with any previously `define`d names
+being available to it.
+
+```lisp
+(eval code)
+```
+
+Example:
+
+```
+llisp> (define f (lambda (a b) (cons a b)))
+nil
+llisp> (eval (quote (f true true)))
+(true true)
 ```
